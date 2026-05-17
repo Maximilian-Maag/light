@@ -258,7 +258,8 @@ def gen_vagrantfile(topology, env, location, domain, cfg):
         "# Used by: environments/dev/startup.sh when LIGHT_RUNTIME=hybrid",
         "",
         'Vagrant.configure("2") do |config|',
-        '  config.vm.box = "ubuntu/jammy64"',
+        '  config.vm.box = "bento/ubuntu-22.04"',
+        '  config.vm.provider "virtualbox"',
         "  config.ssh.insert_key = false",
         "",
     ]
