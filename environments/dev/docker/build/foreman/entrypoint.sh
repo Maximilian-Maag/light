@@ -3,6 +3,9 @@ set -e
 
 DB_HOST="${DB_HOST:-foreman-db}"
 DB_USER="${DB_USER:-foreman}"
+DB_PASSWORD="${DB_PASSWORD:-foreman}"
+FOREMAN_ADMIN_USERNAME="${FOREMAN_ADMIN_USERNAME:-admin}"
+FOREMAN_ADMIN_PASSWORD="${FOREMAN_ADMIN_PASSWORD:-changeme}"
 
 echo "Waiting for PostgreSQL at ${DB_HOST}..."
 until pg_isready -h "${DB_HOST}" -U "${DB_USER}" -q; do
@@ -10,18 +13,29 @@ until pg_isready -h "${DB_HOST}" -U "${DB_USER}" -q; do
 done
 echo "PostgreSQL is ready."
 
-export RAILS_ENV=production
+# Write database.yml with concrete values.
+# foreman-rake uses 'runuser - foreman' (login shell) which strips the
+# environment, so ERB ENV lookups in the template return nil.
+cat > /etc/foreman/database.yml <<DBEOF
+production:
+  adapter: postgresql
+  database: foreman
+  username: ${DB_USER}
+  password: ${DB_PASSWORD}
+  host: ${DB_HOST}
+  port: 5432
+  pool: 25
+DBEOF
 
-# Run migrations (idempotent)
 foreman-rake db:migrate
-
-# Seed initial data (idempotent — skips existing records)
 foreman-rake db:seed || true
 
-# Set admin credentials
-FOREMAN_ADMIN_USERNAME="${FOREMAN_ADMIN_USERNAME:-admin}" \
-FOREMAN_ADMIN_PASSWORD="${FOREMAN_ADMIN_PASSWORD:-changeme}" \
-    foreman-rake permissions:reset || true
+# Embed admin creds in the command string so they survive the login-shell
+# invocation inside foreman-rake (alphanumeric-only values, safe in quotes).
+runuser - foreman -s /bin/bash -c \
+    "FOREMAN_ADMIN_USERNAME='${FOREMAN_ADMIN_USERNAME}' \
+     FOREMAN_ADMIN_PASSWORD='${FOREMAN_ADMIN_PASSWORD}' \
+     RUBYOPT=-W0 RAILS_ENV=production \
+     /usr/bin/foreman-ruby /usr/bin/bundle3.0 exec rake permissions:reset" || true
 
-# Apache + Passenger serve Foreman — run in the foreground
 exec apachectl -D FOREGROUND
