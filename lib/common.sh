@@ -11,8 +11,12 @@ source "${LIGHT_ROOT}/lib/logging.sh"
 load_config() {
     local cfg="${LIGHT_ROOT}/config/light.env"
     [[ -f "${cfg}" ]] || log::die "config/light.env not found. Copy config/light.env.example and fill in your values."
+    # set -a exports every variable defined while sourcing the file so that
+    # child processes launched via exec also see the full config.
+    set -a
     # shellcheck source=/dev/null
     source "${cfg}"
+    set +a
     log::info "Config loaded from ${cfg}"
 }
 
