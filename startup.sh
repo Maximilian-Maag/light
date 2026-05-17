@@ -2,6 +2,7 @@
 # light — startup entry point
 #
 # Usage:
+#   ./startup.sh --init                       generate config/light.env with defaults + random secrets
 #   ./startup.sh --install-requirements       install all host tools (Docker, VirtualBox, Vagrant, …)
 #   ./startup.sh dev    [hybrid|docker|vagrant]
 #   ./startup.sh staging [linode|aws|gcp]
@@ -16,12 +17,14 @@ set -euo pipefail
 LIGHT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${LIGHT_ROOT}/lib/common.sh"
 
-# Handle --install-requirements before load_config so it works on a fresh
-# machine that doesn't have config/light.env yet.
-if [[ "${1:-}" == "--install-requirements" ]]; then
-    shift
-    exec "${LIGHT_ROOT}/scripts/install-requirements.sh" "$@"
-fi
+# Handle bootstrap flags before load_config — these work on a fresh machine
+# that doesn't have config/light.env yet.
+case "${1:-}" in
+    --install-requirements)
+        shift; exec "${LIGHT_ROOT}/scripts/install-requirements.sh" "$@" ;;
+    --init)
+        shift; exec "${LIGHT_ROOT}/scripts/init.sh" "$@" ;;
+esac
 
 load_config
 
