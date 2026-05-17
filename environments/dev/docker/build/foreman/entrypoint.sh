@@ -39,6 +39,7 @@ runuser - foreman -s /bin/bash -c \
      /usr/bin/foreman-ruby /usr/bin/bundle3.0 exec rake permissions:reset" || true
 
 mkdir -p /usr/share/foreman/tmp/sockets /usr/share/foreman/tmp/pids
+rm -f /usr/share/foreman/tmp/sockets/pumactl.sock /usr/share/foreman/tmp/puma.state
 chown -R foreman: /usr/share/foreman/tmp
 
 cd /usr/share/foreman

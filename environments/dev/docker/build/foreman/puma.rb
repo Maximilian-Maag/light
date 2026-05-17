@@ -8,8 +8,6 @@ preload_app!
 
 bind "tcp://0.0.0.0:3000"
 
-state_path "tmp/puma.state"
-activate_control_app "unix://tmp/sockets/pumactl.sock"
 
 on_worker_boot do
   dynflow = ::Rails.application.dynflow
