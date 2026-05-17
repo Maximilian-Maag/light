@@ -127,7 +127,7 @@ start_mgmt_zone() {
     log::section "Waiting for core management services"
     wait_for_port "${IP_PUPPET:-10.10.0.21}"  8140 300
     wait_for_port "${IP_FOREMAN:-10.10.0.20}"  3000 300
-    wait_for_port "${IP_CHECKMK:-10.10.0.23}"  443 240
+    wait_for_port "${IP_CHECKMK:-10.10.0.23}"  5000 240
     wait_for_port "${IP_PULP:-10.10.0.24}"       80 240
 
     log::section "Reloading DNS to pick up topology records"
