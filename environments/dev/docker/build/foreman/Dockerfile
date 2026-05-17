@@ -28,6 +28,13 @@ RUN apt-get update -qq && \
         libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
+# Add the pg gem via bundler.d (mirrors what foreman-installer does for PostgreSQL).
+# pg-x86_64-linux is a precompiled binary gem already in the vendor cache, so no
+# build tools are required — bundle install just extracts it.
+RUN echo "gem 'pg'" > /usr/share/foreman/bundler.d/Gemfile.local.rb && \
+    cd /usr/share/foreman && \
+    RAILS_ENV=production /usr/share/foreman/bin/bundle install --local 2>&1
+
 # Apache runs in the foreground; remove the default site
 RUN a2dissite 000-default 2>/dev/null || true
 
