@@ -38,4 +38,11 @@ runuser - foreman -s /bin/bash -c \
      RUBYOPT=-W0 RAILS_ENV=production \
      /usr/bin/foreman-ruby /usr/bin/bundle3.0 exec rake permissions:reset" || true
 
-exec apachectl -D FOREGROUND
+mkdir -p /usr/share/foreman/tmp/sockets /usr/share/foreman/tmp/pids
+chown -R foreman: /usr/share/foreman/tmp
+
+cd /usr/share/foreman
+exec runuser - foreman -s /bin/bash -c \
+    "cd /usr/share/foreman && RAILS_ENV=production RUBYOPT=-W0 \
+     exec /usr/bin/foreman-ruby /usr/bin/bundle3.0 exec puma \
+     -C config/puma/docker.rb"

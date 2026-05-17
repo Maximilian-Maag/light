@@ -155,8 +155,7 @@ services:
       FOREMAN_ADMIN_PASSWORD: "${FOREMAN_ADMIN_PASS:-changeme}"
       PUPPET_SERVER: "${IP_PUPPET:-10.10.0.21}"
     ports:
-      - "127.0.0.1:9443:443"
-      - "127.0.0.1:9090:9090"
+      - "127.0.0.1:9090:3000"
     depends_on:
       foreman-db:
         condition: service_healthy
@@ -168,7 +167,7 @@ services:
     dns:
       - "${IP_DNS_PRIMARY:-10.10.0.30}"
     healthcheck:
-      test: ["CMD", "curl", "-fsk", "https://localhost/api/v2/status"]
+      test: ["CMD", "curl", "-fs", "http://localhost:3000/api/v2/status"]
       interval: 30s
       timeout: 10s
       retries: 5

@@ -126,7 +126,7 @@ start_mgmt_zone() {
 
     log::section "Waiting for core management services"
     wait_for_port "${IP_PUPPET:-10.10.0.21}"  8140 300
-    wait_for_port "${IP_FOREMAN:-10.10.0.20}"  443 300
+    wait_for_port "${IP_FOREMAN:-10.10.0.20}"  3000 300
     wait_for_port "${IP_CHECKMK:-10.10.0.23}"  443 240
     wait_for_port "${IP_PULP:-10.10.0.24}"       80 240
 
@@ -226,7 +226,7 @@ esac
 log::section "Dev environment ready"
 log::info "Domain:    ${LIGHT_DOMAIN:-simple-test.org}"
 log::info "Checkmk:   http://localhost:5000/cmk/"
-log::info "Foreman:   https://localhost:9443"
+log::info "Foreman:   http://localhost:9090"
 log::info "Pulp:      http://localhost:8080/pulp/api/v3/"
 log::info "Jumphost:  ssh -p 2222 admin@localhost"
 log::info ""
