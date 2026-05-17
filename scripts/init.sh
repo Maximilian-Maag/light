@@ -67,6 +67,7 @@ IP_NTP_SECONDARY="10.10.0.33"
 
 # ── Credentials (auto-generated — store these somewhere safe) ─────────────────
 ADMIN_SSH_KEY_PATH="\${HOME}/.ssh/id_ed25519.pub"
+ADMIN_SSH_KEY_PRIVATE="\${HOME}/.ssh/id_ed25519"
 FOREMAN_ADMIN_USER="admin"
 FOREMAN_ADMIN_PASS="${FOREMAN_PASS}"
 CHECKMK_ADMIN_PASS="${CHECKMK_PASS}"
@@ -92,11 +93,11 @@ ALERT_EMAIL="linux-admins@\${LIGHT_DOMAIN}"
 EOF
 
 # ── SSH key check ─────────────────────────────────────────────────────────────
-SSH_KEY="${HOME}/.ssh/id_ed25519.pub"
+SSH_KEY="${HOME}/.ssh/id_ed25519"
 if [[ ! -f "${SSH_KEY}" ]]; then
-    log::warn "SSH public key not found: ${SSH_KEY}"
+    log::warn "SSH key not found: ${SSH_KEY}"
     log::warn "Generate one with: ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -C light-admin"
-    log::warn "Then update ADMIN_SSH_KEY_PATH in config/light.env"
+    log::warn "Then update ADMIN_SSH_KEY_PATH / ADMIN_SSH_KEY_PRIVATE in config/light.env"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────

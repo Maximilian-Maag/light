@@ -12,7 +12,8 @@ preflight_common() {
     [[ -n "${LIGHT_ENV}" ]]      || log::die "LIGHT_ENV is not set"
     [[ -n "${LIGHT_PROVIDER}" ]] || log::die "LIGHT_PROVIDER is not set"
     [[ -n "${LIGHT_LOCATION}" ]] || log::die "LIGHT_LOCATION is not set"
-    [[ -f "${ADMIN_SSH_KEY_PATH}" ]] || log::die "SSH public key not found: ${ADMIN_SSH_KEY_PATH}"
+    [[ -f "${ADMIN_SSH_KEY_PATH}" ]]    || log::die "SSH public key not found: ${ADMIN_SSH_KEY_PATH}"
+    [[ -f "${ADMIN_SSH_KEY_PRIVATE}" ]] || log::die "SSH private key not found: ${ADMIN_SSH_KEY_PRIVATE}"
 
     log::ok "Common checks passed"
 }

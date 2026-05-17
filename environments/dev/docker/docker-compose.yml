@@ -159,7 +159,7 @@ services:
       - NET_ADMIN
     volumes:
       - ../../../ansible:/opt/ansible:ro
-      - "${ADMIN_SSH_KEY_PATH%.pub}:/root/.ssh/id_ed25519:ro"
+      - "${ADMIN_SSH_KEY_PRIVATE}:/root/.ssh/id_ed25519:ro"
     environment:
       FOREMAN_URL: "https://${IP_FOREMAN:-10.10.0.20}"
       FOREMAN_USER: "${FOREMAN_ADMIN_USER:-admin}"
