@@ -39,6 +39,18 @@ preflight_dev_hybrid() {
     require_cmd docker
     docker info &>/dev/null || log::die "Docker daemon is not running"
     require_cmd vagrant VBoxManage
+
+    # VirtualBox restricts host-only networks to 192.168.56.0/21 by default.
+    # Ensure our management (10.10.0.0/24) and workload (10.20.0.0/16) CIDRs
+    # are in the allowed ranges so Vagrant doesn't fail at boot time.
+    local vbox_conf="/etc/vbox/networks.conf"
+    if ! grep -qs '10\.0\.0\.0/8\|10\.\*' "${vbox_conf}" 2>/dev/null; then
+        log::info "Adding 10.0.0.0/8 to VirtualBox allowed host-only ranges (requires sudo)"
+        sudo mkdir -p /etc/vbox
+        echo "* 10.0.0.0/8 192.168.0.0/16" | sudo tee "${vbox_conf}" > /dev/null
+        log::ok "VirtualBox host-only ranges configured"
+    fi
+
     log::ok "Dev/hybrid checks passed"
 }
 
