@@ -2,8 +2,9 @@
 # light — startup entry point
 #
 # Usage:
-#   ./startup.sh dev    [docker|vagrant]      (default runtime: docker)
-#   ./startup.sh staging [linode|aws|gcp]     (default provider: linode)
+#   ./startup.sh --install-requirements       install all host tools (Docker, VirtualBox, Vagrant, …)
+#   ./startup.sh dev    [hybrid|docker|vagrant]
+#   ./startup.sh staging [linode|aws|gcp]
 #   ./startup.sh prod   [on-prem|aws|gcp|linode]
 #
 # All environments deploy the full management zone (Jumphost, Foreman, Puppet,
@@ -14,6 +15,13 @@ set -euo pipefail
 
 LIGHT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${LIGHT_ROOT}/lib/common.sh"
+
+# Handle --install-requirements before load_config so it works on a fresh
+# machine that doesn't have config/light.env yet.
+if [[ "${1:-}" == "--install-requirements" ]]; then
+    shift
+    exec "${LIGHT_ROOT}/scripts/install-requirements.sh" "$@"
+fi
 
 load_config
 
