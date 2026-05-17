@@ -189,7 +189,7 @@ services:
       - ../../../ansible:/opt/ansible:ro
       - "${ADMIN_SSH_KEY_PRIVATE}:/root/.ssh/id_ed25519:ro"
     environment:
-      FOREMAN_URL: "https://${IP_FOREMAN:-10.10.0.20}"
+      FOREMAN_SERVER_URL: "http://${IP_FOREMAN:-10.10.0.20}:3000"
       FOREMAN_USER: "${FOREMAN_ADMIN_USER:-admin}"
       FOREMAN_PASSWORD: "${FOREMAN_ADMIN_PASS:-changeme}"
     restart: unless-stopped

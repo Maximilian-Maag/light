@@ -1,13 +1,10 @@
 # Dynamic inventory — Foreman is the single source of truth for all hosts.
-# The theforeman.foreman collection provides this plugin.
+# Connection params (url, user, password) are read from environment variables
+# FOREMAN_SERVER_URL, FOREMAN_USER, FOREMAN_PASSWORD set by docker-compose.
 plugin: theforeman.foreman.foreman
 
-url:      "https://{{ lookup('env', 'IP_FOREMAN') }}"
-user:     "{{ lookup('env', 'FOREMAN_ADMIN_USER') }}"
-password: "{{ lookup('env', 'FOREMAN_ADMIN_PASS') }}"
 validate_certs: false
 
-# Group hosts by their function label (web, db, ans, frm, mon, upd, vpn, etc.)
 group_prefix: "function_"
 vars_prefix:  "foreman_"
 
