@@ -20,8 +20,9 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 
 RUN pip install --no-cache-dir \
     ansible \
-    requests \
-    theforeman.foreman
+    requests
+
+RUN ansible-galaxy collection install theforeman.foreman
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
