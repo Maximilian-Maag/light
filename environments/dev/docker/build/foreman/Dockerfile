@@ -2,21 +2,29 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Foreman 3.9 from the official package repo (includes Apache + Passenger)
+# Install Foreman from the official package repo (includes Apache + Passenger).
+# Dynamically detect the latest available version from the repo's InRelease file
+# so the image keeps building as new Foreman versions are released.
 RUN apt-get update -qq && \
-    apt-get install -y --no-install-recommends wget ca-certificates curl postgresql-client && \
+    apt-get install -y --no-install-recommends \
+        wget ca-certificates curl postgresql-client && \
     wget -qO /etc/apt/trusted.gpg.d/foreman.asc \
         https://deb.theforeman.org/foreman.asc && \
-    echo "deb [signed-by=/etc/apt/trusted.gpg.d/foreman.asc] \
-http://deb.theforeman.org/ jammy 3.9" \
-        > /etc/apt/sources.list.d/foreman.list && \
-    echo "deb [signed-by=/etc/apt/trusted.gpg.d/foreman.asc] \
-http://deb.theforeman.org/ plugins 3.9" \
-        >> /etc/apt/sources.list.d/foreman.list && \
+    CODENAME="$(. /etc/os-release && echo "${VERSION_CODENAME}")" && \
+    FOREMAN_VER="$(curl -fsSL \
+        "https://deb.theforeman.org/dists/${CODENAME}/InRelease" | \
+        awk '/^Components:/{for(i=2;i<=NF;i++) print $i}' | \
+        grep -E '^[0-9]+\.[0-9]+$' | sort -V | tail -1)" && \
+    [ -n "${FOREMAN_VER}" ] || \
+        { echo "ERROR: no Foreman release found for ${CODENAME}"; exit 1; } && \
+    echo "Installing Foreman ${FOREMAN_VER} on ${CODENAME}" && \
+    printf 'deb [signed-by=/etc/apt/trusted.gpg.d/foreman.asc] http://deb.theforeman.org/ %s %s\n' \
+        "${CODENAME}" "${FOREMAN_VER}" > /etc/apt/sources.list.d/foreman.list && \
+    printf 'deb [signed-by=/etc/apt/trusted.gpg.d/foreman.asc] http://deb.theforeman.org/ plugins %s\n' \
+        "${FOREMAN_VER}" >> /etc/apt/sources.list.d/foreman.list && \
     apt-get update -qq && \
     apt-get install -y --no-install-recommends \
         foreman \
-        ruby-foreman-discovery \
         libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
