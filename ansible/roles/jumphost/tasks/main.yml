@@ -1,0 +1,83 @@
+---
+- name: Ensure jumphost packages are installed
+  apt:
+    update_cache: yes
+    name:
+      - openssh-server
+      - ufw
+      - fail2ban
+      - netcat-openbsd
+    state: present
+
+- name: Ensure jumphost operator user exists
+  user:
+    name: "{{ jumphost_user }}"
+    shell: /bin/bash
+    groups: sudo
+    create_home: yes
+    state: present
+
+- name: Ensure jumphost SSH directory exists
+  file:
+    path: "/home/{{ jumphost_user }}/.ssh"
+    state: directory
+    owner: "{{ jumphost_user }}"
+    group: "{{ jumphost_user }}"
+    mode: "0700"
+
+- name: Fail if ADMIN_SSH_KEY_PATH is not set for jump host
+  fail:
+    msg: "ADMIN_SSH_KEY_PATH must be defined in the Ansible controller environment to configure jump host SSH access."
+  when: lookup('env', 'ADMIN_SSH_KEY_PATH') == ''
+
+- name: Install operator public SSH key for jump host
+  authorized_key:
+    user: "{{ jumphost_user }}"
+    key: "{{ lookup('file', lookup('env', 'ADMIN_SSH_KEY_PATH')) }}"
+    state: present
+
+- name: Harden SSH daemon for jump host
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^{{ item.regexp }}'
+    line: '{{ item.line }}'
+    state: present
+  loop:
+    - { regexp: 'PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: 'PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: 'AllowAgentForwarding', line: 'AllowAgentForwarding yes' }
+    - { regexp: 'AllowTcpForwarding', line: 'AllowTcpForwarding yes' }
+    - { regexp: 'ClientAliveInterval', line: 'ClientAliveInterval 300' }
+    - { regexp: 'ClientAliveCountMax', line: 'ClientAliveCountMax 0' }
+
+- name: Restart SSH service on jump host
+  service:
+    name: ssh
+    state: restarted
+    enabled: yes
+
+- name: Enable UFW on jump host with strict defaults
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: Allow SSH from external network to jump host
+  ufw:
+    rule: allow
+    port: "{{ jumphost_ssh_port }}"
+    proto: tcp
+    from_ip: "{{ jumphost_ssh_allowed_cidr }}"
+
+- name: Allow SSH from management zone to jump host
+  ufw:
+    rule: allow
+    port: "{{ jumphost_ssh_port }}"
+    proto: tcp
+    from_ip: "{{ lookup('env', 'MGMT_ZONE_CIDR') }}"
+
+- name: Reload UFW to apply jump host firewall rules
+  command: ufw reload
+  become: true
+  changed_when: false
+  failed_when: false

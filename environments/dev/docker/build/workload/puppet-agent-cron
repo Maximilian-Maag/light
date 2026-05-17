@@ -1,0 +1,2 @@
+# Puppet agent — pull every 30 minutes, matching prod behaviour
+*/30 * * * * root /opt/puppetlabs/bin/puppet agent --onetime --no-daemonize --logdest syslog 2>&1 | logger -t puppet-agent

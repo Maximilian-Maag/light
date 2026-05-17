@@ -1,0 +1,4 @@
+---
+jumphost_user: admin
+jumphost_ssh_port: 22
+jumphost_ssh_allowed_cidr: "0.0.0.0/0"

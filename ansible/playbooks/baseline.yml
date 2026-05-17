@@ -1,0 +1,26 @@
+---
+# Baseline playbook — enforces the same security and configuration baseline
+# on every host regardless of environment (dev/staging/prod).
+# After this runs, Puppet takes over for ongoing drift enforcement.
+
+- name: Apply enterprise baseline
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    puppet_server: "{{ lookup('env', 'IP_PUPPET') }}"
+    checkmk_server: "{{ lookup('env', 'IP_CHECKMK') }}"
+    pulp_server: "{{ lookup('env', 'IP_PULP') }}"
+    ntp_servers:
+      - "{{ lookup('env', 'IP_NTP_PRIMARY') }}"
+      - "{{ lookup('env', 'IP_NTP_SECONDARY') }}"
+    dns_servers:
+      - "{{ lookup('env', 'IP_DNS_PRIMARY') }}"
+      - "{{ lookup('env', 'IP_DNS_SECONDARY') }}"
+    domain: "{{ lookup('env', 'LIGHT_DOMAIN') }}"
+
+  roles:
+    - role: common
+    - role: puppet-agent
+    - role: checkmk

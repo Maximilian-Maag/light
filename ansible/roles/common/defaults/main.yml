@@ -1,0 +1,14 @@
+---
+domain: "simple-test.org"
+mgmt_zone_cidr: "10.10.0.0/24"
+dns_servers:
+  - "10.10.0.30"
+  - "10.10.0.31"
+ntp_servers:
+  - "10.10.0.32"
+  - "10.10.0.33"
+puppet_server: "10.10.0.21"
+ansible_server: "10.10.0.22"
+checkmk_server: "10.10.0.23"
+pulp_server: "10.10.0.24"
+jumphost_ip: "10.10.0.10"

@@ -1,0 +1,33 @@
+---
+# Site playbook — application deployment via Ansible (push model).
+# Does NOT touch anything managed by Puppet (SSH, NTP, DNS, firewall basics).
+
+- name: Deploy web servers
+  hosts: "function_web"
+  become: true
+  roles:
+    - role: webserver
+
+- name: Deploy databases
+  hosts: "function_db"
+  become: true
+  roles:
+    - role: database
+
+- name: Configure jumphost
+  hosts: "function_vpn"
+  become: true
+  roles:
+    - role: jumphost
+
+- name: Configure Foreman
+  hosts: "function_frm"
+  become: true
+  roles:
+    - role: foreman
+
+- name: Configure Checkmk
+  hosts: "function_mon"
+  become: true
+  roles:
+    - role: checkmk

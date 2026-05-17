@@ -1,0 +1,20 @@
+---
+- name: Deregister all hosts from Foreman
+  hosts: all
+  become: false
+  gather_facts: false
+
+  vars:
+    foreman_url: "https://{{ lookup('env', 'IP_FOREMAN') }}"
+    foreman_user: "{{ lookup('env', 'FOREMAN_ADMIN_USER') }}"
+    foreman_pass: "{{ lookup('env', 'FOREMAN_ADMIN_PASS') }}"
+
+  tasks:
+    - name: Remove host from Foreman
+      theforeman.foreman.host:
+        server_url: "{{ foreman_url }}"
+        username: "{{ foreman_user }}"
+        password: "{{ foreman_pass }}"
+        validate_certs: false
+        name: "{{ inventory_hostname }}"
+        state: absent

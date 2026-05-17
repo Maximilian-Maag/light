@@ -1,0 +1,40 @@
+---
+- name: Register all hosts in Checkmk
+  hosts: all
+  become: false
+  gather_facts: true
+
+  vars:
+    checkmk_url: "https://{{ lookup('env', 'IP_CHECKMK') }}/cmk/check_mk"
+    checkmk_pass: "{{ lookup('env', 'CHECKMK_ADMIN_PASS') }}"
+
+  tasks:
+    - name: Add host to Checkmk
+      uri:
+        url: "{{ checkmk_url }}/api/1.0/domain-types/host_config/collections/all"
+        method: POST
+        user: cmkadmin
+        password: "{{ checkmk_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+        body_format: json
+        body:
+          host_name: "{{ inventory_hostname }}"
+          folder: "/"
+          attributes:
+            ipaddress: "{{ ansible_default_ipv4.address }}"
+        status_code: [200, 201, 422]
+
+    - name: Activate Checkmk changes
+      uri:
+        url: "{{ checkmk_url }}/api/1.0/domain-types/activation_run/actions/activate-changes/invoke"
+        method: POST
+        user: cmkadmin
+        password: "{{ checkmk_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+        body_format: json
+        body:
+          redirect: false
+        status_code: [200, 202]
+      run_once: true

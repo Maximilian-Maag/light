@@ -1,0 +1,39 @@
+---
+# Sync Pulp package repositories before configuring any workload nodes.
+# Workload nodes never reach the internet — all packages come from Pulp.
+
+- name: Sync Pulp repositories
+  hosts: "function_upd"
+  become: true
+  gather_facts: false
+
+  vars:
+    pulp_url: "http://{{ ansible_host }}"
+    pulp_admin_pass: "{{ lookup('env', 'PULP_ADMIN_PASS') }}"
+    sync_ubuntu: "{{ lookup('env', 'PULP_SYNC_UBUNTU') | bool }}"
+    sync_debian: "{{ lookup('env', 'PULP_SYNC_DEBIAN') | bool }}"
+    sync_rhel:   "{{ lookup('env', 'PULP_SYNC_RHEL')   | bool }}"
+
+  tasks:
+    - name: Wait for Pulp API
+      uri:
+        url: "{{ pulp_url }}/pulp/api/v3/status/"
+        status_code: 200
+      retries: 30
+      delay: 10
+
+    - name: Sync Ubuntu repositories
+      when: sync_ubuntu
+      command: >
+        pulp --base-url {{ pulp_url }}
+             --username admin --password {{ pulp_admin_pass }}
+             deb repository sync --name ubuntu-noble-main
+      changed_when: true
+
+    - name: Sync Debian repositories
+      when: sync_debian
+      command: >
+        pulp --base-url {{ pulp_url }}
+             --username admin --password {{ pulp_admin_pass }}
+             deb repository sync --name debian-bookworm-main
+      changed_when: true

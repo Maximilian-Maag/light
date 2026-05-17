@@ -1,0 +1,142 @@
+---
+# Common baseline tasks — runs on every host in every environment.
+# Puppet will re-enforce these on its 30-min pull cycle.
+
+- name: Set hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Configure /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "127.0.1.1 {{ inventory_hostname }}.{{ domain }} {{ inventory_hostname }}"
+    regexp: "^127\\.0\\.1\\.1"
+
+- name: Configure DNS via systemd-resolved
+  template:
+    src: resolved.conf.j2
+    dest: /etc/systemd/resolved.conf
+    mode: "0644"
+  notify: restart systemd-resolved
+
+- name: Configure NTP via chrony
+  template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    mode: "0644"
+  notify: restart chrony
+
+- name: Harden SSH configuration
+  template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    mode: "0600"
+    validate: "sshd -t -f %s"
+  notify: restart ssh
+
+- name: Set UFW default policies
+  ufw:
+    state: enabled
+    policy: deny
+    direction: incoming
+
+- name: Set UFW default outbound policy to deny
+  ufw:
+    state: enabled
+    policy: deny
+    direction: outgoing
+
+- name: Allow SSH from management zone only
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    src: "{{ mgmt_zone_cidr }}"
+
+- name: Allow Checkmk agent port from monitoring server
+  ufw:
+    rule: allow
+    port: "6556"
+    proto: tcp
+    src: "{{ checkmk_server }}"
+
+- name: Allow outbound DNS queries to DNS servers
+  ufw:
+    rule: allow
+    port: "53"
+    proto: "{{ item }}"
+    to: "{{ dns_server }}"
+    direction: out
+  loop:
+    - tcp
+    - udp
+  loop_control:
+    label: "DNS {{ item }}"
+
+- name: Allow outbound NTP to NTP servers
+  ufw:
+    rule: allow
+    port: "123"
+    proto: udp
+    to: "{{ ntp_server }}"
+    direction: out
+  loop: "{{ ntp_servers }}"
+  loop_control:
+    label: "NTP {{ ntp_server }}"
+
+- name: Allow outbound to Puppet server
+  ufw:
+    rule: allow
+    port: "8140"
+    proto: tcp
+    to: "{{ puppet_server }}"
+    direction: out
+
+- name: Allow outbound to Jumphost
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    to: "{{ jumphost_ip }}"
+    direction: out
+
+- name: Allow outbound to Ansible controller
+  ufw:
+    rule: allow
+    port: "22"
+    proto: tcp
+    to: "{{ ansible_server }}"
+    direction: out
+
+- name: Allow outbound to Pulp mirror for packages
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+    to: "{{ pulp_server }}"
+    direction: out
+  loop:
+    - "80"
+    - "443"
+
+- name: Configure APT to use Pulp mirror
+  template:
+    src: apt-sources.list.j2
+    dest: /etc/apt/sources.list
+    mode: "0644"
+
+- name: Update apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - ca-certificates
+      - chrony
+      - ufw
+      - netcat-openbsd
+      - logwatch
+    state: present

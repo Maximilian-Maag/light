@@ -1,0 +1,34 @@
+---
+- name: Deregister all hosts from Checkmk
+  hosts: all
+  become: false
+  gather_facts: false
+
+  vars:
+    checkmk_url: "https://{{ lookup('env', 'IP_CHECKMK') }}/cmk/check_mk"
+    checkmk_pass: "{{ lookup('env', 'CHECKMK_ADMIN_PASS') }}"
+
+  tasks:
+    - name: Remove host from Checkmk
+      uri:
+        url: "{{ checkmk_url }}/api/1.0/objects/host_config/{{ inventory_hostname }}"
+        method: DELETE
+        user: cmkadmin
+        password: "{{ checkmk_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+        status_code: [200, 204, 404]
+
+    - name: Activate Checkmk changes
+      uri:
+        url: "{{ checkmk_url }}/api/1.0/domain-types/activation_run/actions/activate-changes/invoke"
+        method: POST
+        user: cmkadmin
+        password: "{{ checkmk_pass }}"
+        force_basic_auth: true
+        validate_certs: false
+        body_format: json
+        body:
+          redirect: false
+        status_code: [200, 202]
+      run_once: true
