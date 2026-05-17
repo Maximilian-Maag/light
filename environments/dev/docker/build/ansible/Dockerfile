@@ -8,12 +8,17 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
+    python3-venv \
     openssh-client \
     sshpass \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --no-cache-dir \
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv "${VIRTUAL_ENV}"
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+
+RUN pip install --no-cache-dir \
     ansible \
     requests \
     theforeman.foreman
