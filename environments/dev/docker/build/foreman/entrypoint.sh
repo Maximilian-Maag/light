@@ -30,13 +30,21 @@ DBEOF
 foreman-rake db:migrate
 foreman-rake db:seed || true
 
-# Embed admin creds in the command string so they survive the login-shell
-# invocation inside foreman-rake (alphanumeric-only values, safe in quotes).
+# Set the admin password directly via Rails runner.
+# permissions:reset (3.19+) ignores FOREMAN_ADMIN_PASSWORD and generates its
+# own random password. Write a temp Ruby script with the values already
+# expanded so the runuser login-shell stripping doesn't matter.
+cat > /tmp/set_admin.rb <<RBEOF
+u = User.unscoped.find_by_login('${FOREMAN_ADMIN_USERNAME}') || User.unscoped.find_by_login('admin')
+u.password = '${FOREMAN_ADMIN_PASSWORD}'
+u.password_confirmation = '${FOREMAN_ADMIN_PASSWORD}'
+u.admin = true
+u.save!
+puts "Admin user '#{u.login}' password set."
+RBEOF
 runuser - foreman -s /bin/bash -c \
-    "FOREMAN_ADMIN_USERNAME='${FOREMAN_ADMIN_USERNAME}' \
-     FOREMAN_ADMIN_PASSWORD='${FOREMAN_ADMIN_PASSWORD}' \
-     RUBYOPT=-W0 RAILS_ENV=production \
-     /usr/bin/foreman-ruby /usr/bin/bundle3.0 exec rake permissions:reset" || true
+    "cd /usr/share/foreman && RAILS_ENV=production RUBYOPT=-W0 \
+     /usr/bin/foreman-ruby /usr/bin/bundle3.0 exec rails runner /tmp/set_admin.rb" || true
 
 mkdir -p /usr/share/foreman/tmp/sockets /usr/share/foreman/tmp/pids
 rm -f /usr/share/foreman/tmp/sockets/pumactl.sock /usr/share/foreman/tmp/puma.state
