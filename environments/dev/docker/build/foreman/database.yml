@@ -1,0 +1,8 @@
+production:
+  adapter: postgresql
+  database: foreman
+  username: foreman
+  password: <%= ENV['DB_PASSWORD'] || 'foreman' %>
+  host: <%= ENV['DB_HOST'] || 'foreman-db' %>
+  port: 5432
+  pool: 25

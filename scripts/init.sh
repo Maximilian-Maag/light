@@ -25,6 +25,7 @@ gen_secret() {
 }
 
 FOREMAN_PASS="$(gen_secret)"
+FOREMAN_DB_PASS="$(gen_secret)"
 CHECKMK_PASS="$(gen_secret)"
 PULP_PASS="$(gen_secret)"
 
@@ -55,6 +56,7 @@ MGMT_GATEWAY="10.10.0.1"       # Docker mgmt-zone bridge IP (hybrid mode router)
 
 # ── Management zone service IPs ───────────────────────────────────────────────
 IP_JUMPHOST="10.10.0.10"
+IP_FOREMAN_DB="10.10.0.19"
 IP_FOREMAN="10.10.0.20"
 IP_PUPPET="10.10.0.21"
 IP_ANSIBLE="10.10.0.22"
@@ -70,6 +72,7 @@ ADMIN_SSH_KEY_PATH="\${HOME}/.ssh/id_ed25519.pub"
 ADMIN_SSH_KEY_PRIVATE="\${HOME}/.ssh/id_ed25519"
 FOREMAN_ADMIN_USER="admin"
 FOREMAN_ADMIN_PASS="${FOREMAN_PASS}"
+FOREMAN_DB_PASS="${FOREMAN_DB_PASS}"
 CHECKMK_ADMIN_PASS="${CHECKMK_PASS}"
 PUPPET_CA_SERVER="\${IP_PUPPET}"
 PULP_ADMIN_PASS="${PULP_PASS}"
@@ -104,9 +107,10 @@ fi
 log::ok "Created config/light.env"
 log::info ""
 log::info "Generated secrets (save these):"
-log::info "  Foreman:  ${FOREMAN_PASS}"
-log::info "  Checkmk:  ${CHECKMK_PASS}"
-log::info "  Pulp:     ${PULP_PASS}"
+log::info "  Foreman:     ${FOREMAN_PASS}"
+log::info "  Foreman DB:  ${FOREMAN_DB_PASS}"
+log::info "  Checkmk:     ${CHECKMK_PASS}"
+log::info "  Pulp:        ${PULP_PASS}"
 log::info ""
 log::info "Domain: localhost  (edit LIGHT_DOMAIN to use your own)"
 log::info ""

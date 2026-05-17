@@ -20,6 +20,7 @@ networks:
 
 volumes:
   foreman-data:
+  foreman-db:
   puppet-data:
   checkmk-data:
   pulp-data:
@@ -113,9 +114,31 @@ services:
       retries: 5
       start_period: 120s
 
+  # ── Foreman DB (PostgreSQL sidecar) ──────────────────────────────────────────
+  foreman-db:
+    image: postgres:15
+    container_name: "${LIGHT_ENV:-dev}-${LIGHT_LOCATION:-local}-srv-frm-db"
+    networks:
+      mgmt-zone:
+        ipv4_address: "${IP_FOREMAN_DB:-10.10.0.19}"
+    volumes:
+      - foreman-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: foreman
+      POSTGRES_USER: foreman
+      POSTGRES_PASSWORD: "${FOREMAN_DB_PASS:-foreman-dev}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "foreman"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ── Foreman (inventory + lifecycle — single source of truth) ─────────────────
   foreman:
-    image: theforeman/foreman:latest
+    build:
+      context: ./build/foreman
+      dockerfile: Dockerfile
     container_name: "${LIGHT_ENV:-dev}-${LIGHT_LOCATION:-local}-srv-frm-001"
     hostname: "${LIGHT_ENV:-dev}-${LIGHT_LOCATION:-local}-srv-frm-001.${LIGHT_DOMAIN:-simple-test.org}"
     networks:
@@ -124,6 +147,9 @@ services:
     volumes:
       - foreman-data:/etc/foreman
     environment:
+      DB_HOST: "${IP_FOREMAN_DB:-10.10.0.19}"
+      DB_USER: foreman
+      DB_PASSWORD: "${FOREMAN_DB_PASS:-foreman-dev}"
       FOREMAN_ADMIN_USERNAME: "${FOREMAN_ADMIN_USER:-admin}"
       FOREMAN_ADMIN_PASSWORD: "${FOREMAN_ADMIN_PASS:-changeme}"
       PUPPET_SERVER: "${IP_PUPPET:-10.10.0.21}"
@@ -131,6 +157,8 @@ services:
       - "127.0.0.1:9443:443"
       - "127.0.0.1:9090:9090"
     depends_on:
+      foreman-db:
+        condition: service_healthy
       puppet:
         condition: service_healthy
       dns-primary:
@@ -143,7 +171,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 120s
+      start_period: 180s
 
   # ── Ansible controller (push deployment) ─────────────────────────────────────
   ansible:
