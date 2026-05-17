@@ -26,6 +26,12 @@ case "${1:-}" in
         shift; exec "${LIGHT_ROOT}/scripts/init.sh" "$@" ;;
 esac
 
+# Dev/staging/prod must not run as root: $HOME becomes /root, docker group
+# membership is lost, and Vagrant refuses to run as root.
+if [[ "$(id -u)" -eq 0 ]]; then
+    log::die "Do not run startup.sh as root.\n       Use sudo only for: ./startup.sh --install-requirements"
+fi
+
 load_config
 
 LIGHT_ENV="${1:-${LIGHT_ENV}}"
