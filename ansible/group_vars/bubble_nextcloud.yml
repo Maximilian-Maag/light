@@ -1,0 +1,35 @@
+---
+# Auto-generated from config/topology.json — do not edit manually.
+
+bubble_name: "nextcloud"
+bubble_cidr: "10.20.1.0/24"
+
+bubble_members:
+  - name: "dev-local-srv-nextcloud-app"
+    ip: "10.20.1.11"
+    role: "nextcloud"
+  - name: "dev-local-srv-nextcloud-db"
+    ip: "10.20.1.12"
+    role: "nextcloud-db"
+  - name: "dev-local-srv-nextcloud-redis"
+    ip: "10.20.1.13"
+    role: "nextcloud-redis"
+
+# Per-member IP shortcuts for role variables
+nextcloud_app_ip: "10.20.1.11"
+nextcloud_db_ip: "10.20.1.12"
+nextcloud_redis_ip: "10.20.1.13"
+
+# Management zone IPs (inherited from config/light.env)
+mgmt_zone_cidr: "10.10.0.0/24"
+puppet_server:  "10.10.0.21"
+checkmk_server: "10.10.0.23"
+pulp_server:    "10.10.0.24"
+jumphost_ip:    "10.10.0.10"
+ansible_server: "10.10.0.22"
+dns_servers:
+  - "10.10.0.30"
+  - "10.10.0.31"
+ntp_servers:
+  - "10.10.0.32"
+  - "10.10.0.33"

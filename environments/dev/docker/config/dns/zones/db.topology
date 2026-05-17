@@ -1,0 +1,7 @@
+; topology bubble hosts — auto-generated from config/topology.json
+; Included by named.conf — do not edit manually.
+
+; Bubble: nextcloud
+dev-local-srv-nextcloud-app  IN  A  10.20.1.11
+dev-local-srv-nextcloud-db  IN  A  10.20.1.12
+dev-local-srv-nextcloud-redis  IN  A  10.20.1.13
