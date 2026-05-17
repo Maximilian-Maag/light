@@ -135,7 +135,8 @@ start_mgmt_zone() {
         rndc reload 2>/dev/null || true
 
     log::section "Running Puppet baseline on management zone"
-    ansible_in_container baseline.yml --limit "!bubble_all"
+    ansible_in_container baseline.yml --limit "!bubble_all" || \
+        log::warn "No management zone hosts in Foreman yet — skipping baseline"
 }
 
 # ── Runtime dispatch ──────────────────────────────────────────────────────────
@@ -178,10 +179,12 @@ case "${LIGHT_RUNTIME}" in
         fi
 
         log::section "Registering management zone hosts in Foreman"
-        ansible_in_container foreman-register.yml --limit "!bubble_all"
+        ansible_in_container foreman-register.yml --limit "!bubble_all" || \
+            log::warn "No management zone hosts registered — skipping Foreman registration"
 
         log::section "Registering management zone hosts in Checkmk"
-        ansible_in_container checkmk-register.yml --limit "!bubble_all"
+        ansible_in_container checkmk-register.yml --limit "!bubble_all" || \
+            log::warn "No management zone hosts registered — skipping Checkmk registration"
         ;;
 
     # ── Docker: everything as Docker containers ───────────────────────────────
@@ -194,10 +197,12 @@ case "${LIGHT_RUNTIME}" in
         fi
 
         log::section "Registering management zone hosts in Foreman"
-        ansible_in_container foreman-register.yml --limit "!bubble_all"
+        ansible_in_container foreman-register.yml --limit "!bubble_all" || \
+            log::warn "No management zone hosts registered — skipping Foreman registration"
 
         log::section "Registering management zone hosts in Checkmk"
-        ansible_in_container checkmk-register.yml --limit "!bubble_all"
+        ansible_in_container checkmk-register.yml --limit "!bubble_all" || \
+            log::warn "No management zone hosts registered — skipping Checkmk registration"
         ;;
 
     # ── Vagrant: everything as VirtualBox VMs (legacy) ───────────────────────
