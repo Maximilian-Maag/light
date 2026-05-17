@@ -12,6 +12,9 @@ preflight_common() {
     [[ -n "${LIGHT_ENV}" ]]      || log::die "LIGHT_ENV is not set"
     [[ -n "${LIGHT_PROVIDER}" ]] || log::die "LIGHT_PROVIDER is not set"
     [[ -n "${LIGHT_LOCATION}" ]] || log::die "LIGHT_LOCATION is not set"
+    # Allow ADMIN_SSH_KEY_PRIVATE to be absent from older light.env files by
+    # deriving it from the public key path (strip the .pub suffix).
+    ADMIN_SSH_KEY_PRIVATE="${ADMIN_SSH_KEY_PRIVATE:-${ADMIN_SSH_KEY_PATH%.pub}}"
     [[ -f "${ADMIN_SSH_KEY_PATH}" ]]    || log::die "SSH public key not found: ${ADMIN_SSH_KEY_PATH}"
     [[ -f "${ADMIN_SSH_KEY_PRIVATE}" ]] || log::die "SSH private key not found: ${ADMIN_SSH_KEY_PRIVATE}"
 
