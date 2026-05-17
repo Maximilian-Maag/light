@@ -8,5 +8,7 @@ validate_certs: false
 group_prefix: "function_"
 vars_prefix:  "foreman_"
 
-want_facts: true
+use_reports_api: false
+
+want_facts: false
 want_params: true
