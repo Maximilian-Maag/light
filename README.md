@@ -5,10 +5,12 @@
 A Bash harness that ties together Terraform, Ansible, Puppet, Foreman, and Checkmk to spin up a fully isolated enterprise infrastructure stack — locally on your laptop or on a cloud/on-prem provider — with a single command.
 
 ```bash
-./startup.sh dev          # full stack on your laptop
-./startup.sh staging aws  # full stack on AWS
-./startup.sh prod on-prem # full stack on vSphere/NSX
-./teardown.sh dev         # destroy everything
+sudo ./startup.sh --install-requirements  # install Docker, VirtualBox, Vagrant, Terraform, Ansible
+./startup.sh --init                       # generate config/light.env with defaults + random secrets
+./startup.sh dev                          # full stack on your laptop
+./startup.sh staging aws                  # full stack on AWS
+./startup.sh prod on-prem                 # full stack on vSphere/NSX
+./teardown.sh dev                         # destroy everything
 ```
 
 Every environment runs the **identical** service topology. A workload VM cannot tell whether it is running in dev, staging, or production.
@@ -178,18 +180,14 @@ The `role` field in `topology.json` maps to an Ansible role. Place bubble-specif
 
 ## Prerequisites
 
-### Required tools (all modes)
-
-| Tool | Minimum version | Used for |
-|------|----------------|---------|
-| Bash | 4.0+ | Entry point scripts |
-| Python 3 | 3.8+ | Topology generation (`gen_topology.py`) |
-| `nc` (netcat) | any | Port readiness checks |
+Run `./startup.sh --install-requirements` to install everything automatically on Arch, Manjaro, Ubuntu, or Debian. For other systems, install the tools below manually.
 
 ### Dev — hybrid mode (default)
 
 | Tool | Minimum version |
 |------|----------------|
+| Bash | 4.0+ |
+| Python 3 | 3.8+ |
 | Docker + Docker Compose v2 | 24.0+ |
 | VirtualBox | 7.0+ |
 | Vagrant | 2.3+ |
@@ -210,19 +208,40 @@ The `role` field in `topology.json` maps to an Ansible role. Place bubble-specif
 
 ### SSH key pair
 
-All environments require an Ed25519 key pair:
+All environments require an Ed25519 key pair. `--init` defaults to `~/.ssh/id_ed25519.pub`; generate one if it doesn't exist:
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/light_ed25519 -C "light-admin"
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -C "light-admin"
 ```
 
-Set `ADMIN_SSH_KEY_PATH` in `config/light.env` to the **public** key path (`~/.ssh/light_ed25519.pub`). The harness derives the private key path automatically.
+Update `ADMIN_SSH_KEY_PATH` in `config/light.env` if you use a different key path.
 
 ---
 
 ## Configuration
 
-Copy the example and fill in your values:
+### Quickest path — `--init`
+
+```bash
+./startup.sh --init
+```
+
+Generates `config/light.env` with all defaults pre-filled and **random 24-character passwords** for Foreman, Checkmk, and Pulp. The generated passwords are printed to stdout once — save them.
+
+```
+[  OK ] Created config/light.env
+
+        Generated secrets (save these):
+          Foreman:  wOaqH7z0SQQmkBKJPQx8qgpO
+          Checkmk:  G0zZLb8PNyimDoToMn08Ljmw
+          Pulp:     vkgwDQHash9c7FfOi9D27TNp
+
+        Domain: localhost  (edit LIGHT_DOMAIN to use your own)
+```
+
+Prompts before overwriting an existing `config/light.env`. Safe to re-run.
+
+### Manual path — copy the example
 
 ```bash
 cp config/light.env.example config/light.env
@@ -235,7 +254,7 @@ $EDITOR config/light.env
 
 ```bash
 # Domain — all hostnames are {env}-{location}-{type}-{function}-{seq}.{LIGHT_DOMAIN}
-LIGHT_DOMAIN="simple-test.org"     # change to your domain
+LIGHT_DOMAIN="localhost"           # --init default; change to your domain
 
 # Environment and provider (overridden by startup.sh arguments)
 LIGHT_ENV="dev"
@@ -252,11 +271,11 @@ IP_JUMPHOST="10.10.0.10"
 IP_FOREMAN="10.10.0.20"
 # ... see config/light.env.example for all IPs
 
-# Credentials
-ADMIN_SSH_KEY_PATH="${HOME}/.ssh/light_ed25519.pub"
-FOREMAN_ADMIN_PASS="changeme"
-CHECKMK_ADMIN_PASS="changeme"
-PULP_ADMIN_PASS="changeme"
+# Credentials (--init generates these randomly)
+ADMIN_SSH_KEY_PATH="${HOME}/.ssh/id_ed25519.pub"
+FOREMAN_ADMIN_PASS="..."
+CHECKMK_ADMIN_PASS="..."
+PULP_ADMIN_PASS="..."
 ```
 
 > Cloud provider credentials (Linode token, AWS keys, GCP project) are also set here — see `config/light.env.example` for the full list.
@@ -265,18 +284,37 @@ PULP_ADMIN_PASS="changeme"
 
 ## Quick Start — Dev
 
-### 1. Configure
+### 1. Install host tools (once per machine)
 
 ```bash
-cp config/light.env.example config/light.env
-$EDITOR config/light.env      # set passwords, SSH key path, domain
+sudo ./startup.sh --install-requirements
 ```
 
-### 2. Declare your service bubbles (optional)
+Installs Docker, VirtualBox, Vagrant, Terraform, Ansible, and supporting tools. Skips anything already present. Supports **Arch, Manjaro, Ubuntu, Debian**.
+
+After it completes:
+- Log out and back in (or run `newgrp docker`) so the `docker` group takes effect
+- Reboot if VirtualBox kernel modules were just installed
+
+### 2. Generate config
+
+```bash
+./startup.sh --init
+```
+
+Creates `config/light.env` with `localhost` as the domain and random passwords for all services. The passwords are printed once — save them.
+
+To use a custom domain or adjust any value, edit the file:
+
+```bash
+$EDITOR config/light.env
+```
+
+### 3. Declare your service bubbles (optional)
 
 Edit `config/topology.json` to define which VMs to deploy and in which bubbles. If you skip this, only the management zone starts.
 
-### 3. Start
+### 4. Start
 
 ```bash
 ./startup.sh dev
@@ -294,13 +332,13 @@ Edit `config/topology.json` to define which VMs to deploy and in which bubbles. 
 7. Runs `vagrant up` to start all workload VMs (one VirtualBox VM per bubble member)
 8. For each bubble: waits for SSH, runs Puppet baseline, applies application roles, registers in Foreman and Checkmk
 
-### 4. Watch services come up
+### 5. Watch services come up
 
 ```bash
 ./scripts/dev-status.sh --watch
 ```
 
-### 5. Destroy when done
+### 6. Destroy when done
 
 ```bash
 ./teardown.sh dev
