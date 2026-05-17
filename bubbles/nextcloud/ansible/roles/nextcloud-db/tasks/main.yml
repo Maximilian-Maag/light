@@ -1,0 +1,37 @@
+---
+- name: Install PostgreSQL
+  apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+    update_cache: true
+
+- name: Ensure PostgreSQL is started
+  service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Create Nextcloud database user
+  become_user: postgres
+  postgresql_user:
+    name: "{{ nextcloud_db_user }}"
+    password: "{{ nextcloud_db_pass }}"
+    state: present
+
+- name: Create Nextcloud database
+  become_user: postgres
+  postgresql_db:
+    name: "{{ nextcloud_db_name }}"
+    owner: "{{ nextcloud_db_user }}"
+    state: present
+
+- name: Allow PostgreSQL inbound from nextcloud-app only
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ nextcloud_app_ip }}"
+    to_port: "5432"
+    proto: tcp
+    direction: in

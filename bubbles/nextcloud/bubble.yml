@@ -1,0 +1,41 @@
+---
+# Service bubble definition — Nextcloud collaboration suite
+# Three VMs in one isolated network segment.
+# They talk freely to each other and to the management zone.
+# They cannot reach any other bubble.
+
+name: nextcloud
+description: "Nextcloud — app, database, cache"
+cidr: "10.20.1.0/24"
+
+members:
+  nextcloud-app:
+    ip: "10.20.1.11"
+    type: srv
+    function: web
+    seq: "001"
+    ansible_role: nextcloud
+    # Ports this member serves to the OUTSIDE (via Jumphost or load balancer)
+    expose:
+      - { port: 443, proto: tcp, description: "Nextcloud HTTPS" }
+    # Ports this member serves to OTHER BUBBLE MEMBERS ONLY
+    intra_bubble:
+      - { port: 80,  proto: tcp, description: "HTTP redirect" }
+
+  nextcloud-db:
+    ip: "10.20.1.12"
+    type: srv
+    function: db
+    seq: "001"
+    ansible_role: nextcloud-db
+    intra_bubble:
+      - { port: 5432, proto: tcp, description: "PostgreSQL" }
+
+  nextcloud-redis:
+    ip: "10.20.1.13"
+    type: srv
+    function: cache
+    seq: "001"
+    ansible_role: nextcloud-redis
+    intra_bubble:
+      - { port: 6379, proto: tcp, description: "Redis" }

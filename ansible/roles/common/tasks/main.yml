@@ -34,90 +34,84 @@
     validate: "sshd -t -f %s"
   notify: restart ssh
 
-- name: Set UFW default policies
-  ufw:
+- name: Set UFW default inbound policy to deny
+  community.general.ufw:
     state: enabled
     policy: deny
     direction: incoming
 
 - name: Set UFW default outbound policy to deny
-  ufw:
+  community.general.ufw:
     state: enabled
     policy: deny
     direction: outgoing
 
-- name: Allow SSH from management zone only
-  ufw:
+- name: Allow SSH inbound from management zone
+  community.general.ufw:
     rule: allow
-    port: "22"
+    to_port: "22"
     proto: tcp
-    src: "{{ mgmt_zone_cidr }}"
+    from_ip: "{{ mgmt_zone_cidr }}"
+    direction: in
 
-- name: Allow Checkmk agent port from monitoring server
-  ufw:
+- name: Allow Checkmk agent polling inbound
+  community.general.ufw:
     rule: allow
-    port: "6556"
+    to_port: "6556"
     proto: tcp
-    src: "{{ checkmk_server }}"
+    from_ip: "{{ checkmk_server }}"
+    direction: in
 
-- name: Allow outbound DNS queries to DNS servers
-  ufw:
+- name: Allow outbound DNS queries
+  community.general.ufw:
     rule: allow
-    port: "53"
-    proto: "{{ item }}"
-    to: "{{ dns_server }}"
+    to_ip: "{{ item[0] }}"
+    to_port: "53"
+    proto: "{{ item[1] }}"
     direction: out
-  loop:
-    - tcp
-    - udp
+  loop: "{{ dns_servers | product(['tcp', 'udp']) | list }}"
   loop_control:
-    label: "DNS {{ item }}"
+    label: "DNS {{ item[0] }} {{ item[1] }}"
 
-- name: Allow outbound NTP to NTP servers
-  ufw:
+- name: Allow outbound NTP
+  community.general.ufw:
     rule: allow
-    port: "123"
+    to_ip: "{{ item }}"
+    to_port: "123"
     proto: udp
-    to: "{{ ntp_server }}"
     direction: out
   loop: "{{ ntp_servers }}"
   loop_control:
-    label: "NTP {{ ntp_server }}"
+    label: "NTP {{ item }}"
 
 - name: Allow outbound to Puppet server
-  ufw:
+  community.general.ufw:
     rule: allow
-    port: "8140"
+    to_ip: "{{ puppet_server }}"
+    to_port: "8140"
     proto: tcp
-    to: "{{ puppet_server }}"
     direction: out
 
-- name: Allow outbound to Jumphost
-  ufw:
+- name: Allow outbound to Pulp mirror
+  community.general.ufw:
     rule: allow
-    port: "22"
+    to_ip: "{{ pulp_server }}"
+    to_port: "{{ item }}"
     proto: tcp
-    to: "{{ jumphost_ip }}"
-    direction: out
-
-- name: Allow outbound to Ansible controller
-  ufw:
-    rule: allow
-    port: "22"
-    proto: tcp
-    to: "{{ ansible_server }}"
-    direction: out
-
-- name: Allow outbound to Pulp mirror for packages
-  ufw:
-    rule: allow
-    port: "{{ item }}"
-    proto: tcp
-    to: "{{ pulp_server }}"
     direction: out
   loop:
     - "80"
     - "443"
+  loop_control:
+    label: "Pulp port {{ item }}"
+
+- name: Allow outbound to Checkmk for registration
+  community.general.ufw:
+    rule: allow
+    to_ip: "{{ checkmk_server }}"
+    to_port: "443"
+    proto: tcp
+    direction: out
 
 - name: Configure APT to use Pulp mirror
   template:

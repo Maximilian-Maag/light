@@ -1,0 +1,73 @@
+# -*- mode: ruby -*-
+# Vagrant dev environment — identical service topology to Docker Compose and prod.
+# Each management service and workload node gets its own VM.
+# Requires: VirtualBox, vagrant-hostmanager plugin
+#   vagrant plugin install vagrant-hostmanager
+
+ENV_NAME  = ENV.fetch("LIGHT_ENV",      "dev")
+LOC       = ENV.fetch("LIGHT_LOCATION", "local")
+DOMAIN    = ENV.fetch("LIGHT_DOMAIN",   "simple-test.org")
+MGMT_NET  = ENV.fetch("MGMT_ZONE_CIDR", "10.10.0.0/24").split("/")[0].split(".")[0..2].join(".")
+WORK_NET  = ENV.fetch("WORKLOAD_CIDR",  "10.20.0.0/24").split("/")[0].split(".")[0..2].join(".")
+BOX       = "ubuntu/noble64"
+
+def hostname(func, seq)
+  "#{ENV_NAME}-#{LOC}-srv-#{func}-#{seq}"
+end
+
+Vagrant.configure("2") do |config|
+  config.vm.box = BOX
+
+  config.hostmanager.enabled      = true
+  config.hostmanager.manage_host  = true
+  config.hostmanager.manage_guest = true
+  config.hostmanager.include_offline = false
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = 512
+    vb.cpus   = 1
+    vb.linked_clone = true
+  end
+
+  # ── Management zone ──────────────────────────────────────────────────────
+  {
+    "dns-001"  => { ip: "10.10.0.30", func: "dns" },
+    "ntp-001"  => { ip: "10.10.0.32", func: "ntp" },
+    "upd-001"  => { ip: "10.10.0.24", func: "upd", mem: 2048 },
+    "bas-001"  => { ip: "10.10.0.21", func: "bas", mem: 2048 },
+    "frm-001"  => { ip: "10.10.0.20", func: "frm", mem: 2048 },
+    "ans-001"  => { ip: "10.10.0.22", func: "ans" },
+    "mon-001"  => { ip: "10.10.0.23", func: "mon", mem: 1024 },
+    "vpn-001"  => { ip: "10.10.0.10", func: "vpn" },
+  }.each do |id, cfg|
+    config.vm.define "#{ENV_NAME}-#{LOC}-srv-#{id}" do |node|
+      node.vm.hostname = "#{ENV_NAME}-#{LOC}-srv-#{id}.#{DOMAIN}"
+      node.vm.network "private_network", ip: cfg[:ip]
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = cfg.fetch(:mem, 512)
+        vb.name   = "#{ENV_NAME}-#{LOC}-srv-#{id}"
+      end
+      node.vm.provision "shell", inline: <<~SHELL
+        hostnamectl set-hostname #{ENV_NAME}-#{LOC}-srv-#{id}.#{DOMAIN}
+      SHELL
+    end
+  end
+
+  # ── Workload zone ────────────────────────────────────────────────────────
+  {
+    "web-001" => "10.20.0.11",
+    "db-001"  => "10.20.0.12",
+  }.each do |id, ip|
+    config.vm.define "#{ENV_NAME}-#{LOC}-srv-#{id}" do |node|
+      node.vm.hostname = "#{ENV_NAME}-#{LOC}-srv-#{id}.#{DOMAIN}"
+      node.vm.network "private_network", ip: ip
+      node.vm.provider "virtualbox" do |vb|
+        vb.memory = 1024
+        vb.name   = "#{ENV_NAME}-#{LOC}-srv-#{id}"
+      end
+      node.vm.provision "shell", inline: <<~SHELL
+        hostnamectl set-hostname #{ENV_NAME}-#{LOC}-srv-#{id}.#{DOMAIN}
+      SHELL
+    end
+  end
+end

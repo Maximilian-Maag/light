@@ -1,0 +1,34 @@
+---
+- name: Install Redis
+  apt:
+    name: redis-server
+    state: present
+    update_cache: true
+
+- name: Configure Redis to bind to bubble IP only
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^bind "
+    line: "bind 127.0.0.1 {{ nextcloud_redis_ip }}"
+  notify: restart redis
+
+- name: Require Redis auth password
+  lineinfile:
+    path: /etc/redis/redis.conf
+    regexp: "^# requirepass|^requirepass"
+    line: "requirepass {{ nextcloud_redis_pass }}"
+  notify: restart redis
+
+- name: Ensure Redis is started
+  service:
+    name: redis-server
+    state: started
+    enabled: true
+
+- name: Allow Redis inbound from nextcloud-app only
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ nextcloud_app_ip }}"
+    to_port: "6379"
+    proto: tcp
+    direction: in

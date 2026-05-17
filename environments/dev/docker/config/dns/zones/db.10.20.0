@@ -1,0 +1,13 @@
+; Reverse zone: 10.20.0.x (workload zone)
+$TTL 300
+@   IN  SOA dev-local-srv-dns-001.simple-test.org. admin.simple-test.org. (
+            2026051701
+            3600
+            900
+            604800
+            300 )
+
+@   IN  NS  dev-local-srv-dns-001.simple-test.org.
+
+11  IN  PTR dev-local-srv-web-001.simple-test.org.
+12  IN  PTR dev-local-srv-db-001.simple-test.org.

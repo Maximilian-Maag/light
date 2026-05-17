@@ -1,0 +1,27 @@
+---
+- name: Download Checkmk agent from Checkmk server
+  get_url:
+    url: "http://{{ checkmk_server }}/cmk/agents/check-mk-agent_latest-1_all.deb"
+    dest: /tmp/check-mk-agent.deb
+    mode: "0644"
+  when: ansible_os_family == "Debian"
+
+- name: Install Checkmk agent
+  apt:
+    deb: /tmp/check-mk-agent.deb
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Enable and start Checkmk agent socket
+  service:
+    name: check_mk.socket
+    state: started
+    enabled: true
+
+- name: Allow Checkmk agent port in UFW
+  community.general.ufw:
+    rule: allow
+    to_port: "6556"
+    proto: tcp
+    from_ip: "{{ checkmk_server }}"
+    direction: in

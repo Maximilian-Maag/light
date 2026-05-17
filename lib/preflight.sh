@@ -30,6 +30,14 @@ preflight_dev_vagrant() {
     log::ok "Dev/vagrant checks passed"
 }
 
+preflight_dev_hybrid() {
+    preflight_common
+    require_cmd docker
+    docker info &>/dev/null || log::die "Docker daemon is not running"
+    require_cmd vagrant VBoxManage
+    log::ok "Dev/hybrid checks passed"
+}
+
 preflight_staging() {
     preflight_common
     require_cmd terraform ansible ansible-playbook

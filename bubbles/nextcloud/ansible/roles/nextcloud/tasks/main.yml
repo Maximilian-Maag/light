@@ -1,0 +1,80 @@
+---
+- name: Install Nextcloud dependencies
+  apt:
+    name:
+      - nginx
+      - php8.3-fpm
+      - php8.3-gd
+      - php8.3-pgsql
+      - php8.3-curl
+      - php8.3-mbstring
+      - php8.3-intl
+      - php8.3-xml
+      - php8.3-zip
+      - php8.3-redis
+      - php8.3-bcmath
+      - php8.3-imagick
+      - unzip
+      - curl
+    state: present
+    update_cache: true
+
+- name: Download Nextcloud
+  get_url:
+    url: "https://download.nextcloud.com/server/releases/latest.tar.bz2"
+    dest: /tmp/nextcloud.tar.bz2
+    mode: "0644"
+
+- name: Extract Nextcloud
+  unarchive:
+    src: /tmp/nextcloud.tar.bz2
+    dest: /var/www/
+    remote_src: true
+    owner: www-data
+    group: www-data
+
+- name: Deploy nginx vhost for Nextcloud
+  template:
+    src: nextcloud-nginx.conf.j2
+    dest: /etc/nginx/sites-enabled/nextcloud
+    mode: "0644"
+  notify: reload nginx
+
+- name: Enable and start services
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - nginx
+    - php8.3-fpm
+
+- name: Allow HTTPS inbound (external web traffic)
+  community.general.ufw:
+    rule: allow
+    to_port: "443"
+    proto: tcp
+    direction: in
+
+- name: Allow HTTP inbound (for redirect to HTTPS)
+  community.general.ufw:
+    rule: allow
+    to_port: "80"
+    proto: tcp
+    direction: in
+
+- name: Allow outbound to PostgreSQL on nextcloud-db
+  community.general.ufw:
+    rule: allow
+    to_ip: "{{ nextcloud_db_ip }}"
+    to_port: "5432"
+    proto: tcp
+    direction: out
+
+- name: Allow outbound to Redis on nextcloud-redis
+  community.general.ufw:
+    rule: allow
+    to_ip: "{{ nextcloud_redis_ip }}"
+    to_port: "6379"
+    proto: tcp
+    direction: out

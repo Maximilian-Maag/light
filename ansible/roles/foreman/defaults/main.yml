@@ -1,0 +1,4 @@
+---
+foreman_admin_user: "admin"
+foreman_admin_pass: "changeme"
+mgmt_zone_cidr: "10.10.0.0/24"

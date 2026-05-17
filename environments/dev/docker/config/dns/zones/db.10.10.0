@@ -1,0 +1,21 @@
+; Reverse zone: 10.10.0.x (management zone)
+$TTL 300
+@   IN  SOA dev-local-srv-dns-001.simple-test.org. admin.simple-test.org. (
+            2026051701
+            3600
+            900
+            604800
+            300 )
+
+@   IN  NS  dev-local-srv-dns-001.simple-test.org.
+
+10  IN  PTR dev-local-srv-vpn-001.simple-test.org.
+20  IN  PTR dev-local-srv-frm-001.simple-test.org.
+21  IN  PTR dev-local-srv-bas-001.simple-test.org.
+22  IN  PTR dev-local-srv-ans-001.simple-test.org.
+23  IN  PTR dev-local-srv-mon-001.simple-test.org.
+24  IN  PTR dev-local-srv-upd-001.simple-test.org.
+30  IN  PTR dev-local-srv-dns-001.simple-test.org.
+31  IN  PTR dev-local-srv-dns-002.simple-test.org.
+32  IN  PTR dev-local-srv-ntp-001.simple-test.org.
+33  IN  PTR dev-local-srv-ntp-002.simple-test.org.

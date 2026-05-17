@@ -75,7 +75,7 @@ ansible_play() {
     local playbook="${1:?}"; shift
     log::info "Running playbook ${playbook}"
     ansible-playbook \
-        -i "${LIGHT_ROOT}/ansible/inventory/foreman.py" \
+        -i "${LIGHT_ROOT}/ansible/inventory/foreman.yml" \
         "${LIGHT_ROOT}/ansible/playbooks/${playbook}" \
         "$@"
 }

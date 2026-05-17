@@ -1,0 +1,57 @@
+{
+  "_comment": "Topology declaration — defines every service bubble and VM before startup.",
+  "_comment2": "Run ./startup.sh dev to apply. The harness generates Docker Compose, DNS records, and Ansible vars from this file.",
+
+  "bubbles": {
+    "nextcloud": {
+      "description": "Nextcloud collaboration suite",
+      "cidr": "10.20.1.0/24",
+      "members": [
+        {
+          "name": "app",
+          "function": "web",
+          "ip": "10.20.1.11",
+          "role": "nextcloud",
+          "expose": [
+            { "port": 443, "proto": "tcp", "description": "Nextcloud HTTPS" },
+            { "port": 80,  "proto": "tcp", "description": "HTTP → HTTPS redirect" }
+          ],
+          "intra_only": []
+        },
+        {
+          "name": "db",
+          "function": "db",
+          "ip": "10.20.1.12",
+          "role": "nextcloud-db",
+          "expose": [],
+          "intra_only": [
+            { "port": 5432, "proto": "tcp", "description": "PostgreSQL — nextcloud-app only" }
+          ]
+        },
+        {
+          "name": "redis",
+          "function": "cache",
+          "ip": "10.20.1.13",
+          "role": "nextcloud-redis",
+          "expose": [],
+          "intra_only": [
+            { "port": 6379, "proto": "tcp", "description": "Redis — nextcloud-app only" }
+          ]
+        }
+      ]
+    }
+  },
+
+  "_add_more_bubbles": {
+    "_comment": "Add more bubbles here — each gets its own /24 and network segment.",
+    "_example_gitlab": {
+      "description": "GitLab CE",
+      "cidr": "10.20.2.0/24",
+      "members": [
+        { "name": "app",  "function": "web", "ip": "10.20.2.11", "role": "gitlab",    "expose": [{ "port": 443 }, { "port": 22 }], "intra_only": [] },
+        { "name": "db",   "function": "db",  "ip": "10.20.2.12", "role": "gitlab-db", "expose": [], "intra_only": [{ "port": 5432 }] },
+        { "name": "redis","function": "cache","ip": "10.20.2.13", "role": "gitlab-redis","expose":[],"intra_only":[{"port":6379}]}
+      ]
+    }
+  }
+}

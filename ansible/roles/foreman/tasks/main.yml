@@ -1,0 +1,33 @@
+---
+# Foreman role — configures the Foreman server after it is running.
+# The Foreman container is started by Docker Compose / Terraform;
+# this role handles post-start configuration (Smart Proxy, Puppet integration).
+
+- name: Wait for Foreman API to be ready
+  uri:
+    url: "https://{{ inventory_hostname }}/api/v2/status"
+    validate_certs: false
+    user: "{{ foreman_admin_user }}"
+    password: "{{ foreman_admin_pass }}"
+    force_basic_auth: true
+    status_code: 200
+  retries: 30
+  delay: 10
+  register: foreman_status
+  until: foreman_status.status == 200
+
+- name: Allow Foreman HTTPS inbound from management zone
+  community.general.ufw:
+    rule: allow
+    to_port: "443"
+    proto: tcp
+    from_ip: "{{ mgmt_zone_cidr }}"
+    direction: in
+
+- name: Allow Foreman Smart Proxy inbound from management zone
+  community.general.ufw:
+    rule: allow
+    to_port: "9090"
+    proto: tcp
+    from_ip: "{{ mgmt_zone_cidr }}"
+    direction: in

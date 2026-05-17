@@ -1,0 +1,50 @@
+---
+# Bubble firewall rules — applied to every member of the bubble.
+# Sits on top of the common baseline UFW rules (which handle mgmt zone access).
+# Enforces:
+#   - Intra-bubble: all members can reach all other members (full mesh)
+#   - Cross-bubble: no traffic to/from other bubbles
+#   - External: only expose ports declared in bubble.yml
+
+- name: Allow inbound from all bubble members
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ item.ip }}"
+    direction: in
+  loop: "{{ bubble_members }}"
+  loop_control:
+    label: "intra-bubble inbound from {{ item.name }} ({{ item.ip }})"
+  when: item.ip != ansible_default_ipv4.address
+
+- name: Allow outbound to all bubble members
+  community.general.ufw:
+    rule: allow
+    to_ip: "{{ item.ip }}"
+    direction: out
+  loop: "{{ bubble_members }}"
+  loop_control:
+    label: "intra-bubble outbound to {{ item.name }} ({{ item.ip }})"
+  when: item.ip != ansible_default_ipv4.address
+
+- name: Deny inbound from all other workload/bubble ranges (cross-bubble block)
+  community.general.ufw:
+    rule: deny
+    from_ip: "10.20.0.0/16"
+    direction: in
+    insert: 1
+    comment: "cross-bubble deny — inserted before allow rules to catch other bubbles"
+  # This DENY is inserted at position 1 so it runs before intra-bubble ALLOWs would
+  # match other 10.20.x.x traffic. UFW processes rules top-down; the intra-bubble
+  # ALLOWs above are also present but only match the specific bubble member IPs.
+  # Net effect: traffic from 10.20.2.x (another bubble) hits this DENY first.
+
+- name: Re-allow inbound from own bubble members (override the broad 10.20/16 deny)
+  community.general.ufw:
+    rule: allow
+    from_ip: "{{ item.ip }}"
+    direction: in
+    insert: 2
+  loop: "{{ bubble_members }}"
+  loop_control:
+    label: "re-allow inbound from {{ item.name }}"
+  when: item.ip != ansible_default_ipv4.address

@@ -1,0 +1,8 @@
+# Managed by Puppet baseline — manual changes will be overwritten on next run.
+<% @ntp_servers.each do |ntp| -%>
+server <%= ntp %> iburst
+<% end -%>
+driftfile /var/lib/chrony/drift
+makestep 1.0 3
+rtcsync
+logdir /var/log/chrony

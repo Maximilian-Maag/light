@@ -1,0 +1,9 @@
+---
+# Populated by add-bubble.sh from bubble.yml at deploy time.
+# Do not edit manually.
+bubble_name: "nextcloud"
+bubble_cidr: "10.20.1.0/24"
+bubble_members:
+  - { name: nextcloud-app,   ip: "10.20.1.11" }
+  - { name: nextcloud-db,    ip: "10.20.1.12" }
+  - { name: nextcloud-redis, ip: "10.20.1.13" }

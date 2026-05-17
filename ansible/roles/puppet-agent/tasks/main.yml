@@ -1,0 +1,58 @@
+---
+- name: Add Puppet apt repository
+  block:
+    - name: Download Puppet release package
+      get_url:
+        url: "https://apt.puppet.com/puppet8-release-{{ ansible_distribution_release }}.deb"
+        dest: /tmp/puppet-release.deb
+        mode: "0644"
+
+    - name: Install Puppet release package
+      apt:
+        deb: /tmp/puppet-release.deb
+        state: present
+
+    - name: Update apt cache after adding Puppet repo
+      apt:
+        update_cache: true
+  when: ansible_os_family == "Debian"
+
+- name: Install puppet-agent
+  apt:
+    name: puppet-agent
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Configure Puppet agent server
+  ini_file:
+    path: /etc/puppetlabs/puppet/puppet.conf
+    section: agent
+    option: server
+    value: "{{ puppet_server }}"
+
+- name: Configure Puppet agent certname
+  ini_file:
+    path: /etc/puppetlabs/puppet/puppet.conf
+    section: agent
+    option: certname
+    value: "{{ inventory_hostname }}"
+
+- name: Configure Puppet agent runinterval
+  ini_file:
+    path: /etc/puppetlabs/puppet/puppet.conf
+    section: agent
+    option: runinterval
+    value: "1800"
+
+- name: Install Puppet agent cron (30-min pull cycle)
+  cron:
+    name: puppet-agent
+    user: root
+    minute: "0,30"
+    job: "/opt/puppetlabs/bin/puppet agent --onetime --no-daemonize --logdest syslog 2>&1 | logger -t puppet-agent"
+    state: present
+
+- name: Run Puppet agent once to sign certificate and apply baseline
+  command: /opt/puppetlabs/bin/puppet agent --onetime --no-daemonize --waitforcert 120
+  changed_when: true
+  failed_when: false

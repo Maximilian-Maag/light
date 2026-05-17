@@ -1,0 +1,12 @@
+---
+# Hiera common data — override per environment in data/environments/<env>.yaml
+
+baseline::checkmk_server: "10.10.0.23"
+baseline::puppet_server:  "10.10.0.21"
+baseline::mgmt_zone_cidr: "10.10.0.0/24"
+baseline::ntp_servers:
+  - "10.10.0.32"
+  - "10.10.0.33"
+baseline::dns_servers:
+  - "10.10.0.30"
+  - "10.10.0.31"
