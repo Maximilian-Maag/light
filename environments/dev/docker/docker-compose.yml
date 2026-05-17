@@ -97,11 +97,12 @@ services:
       - puppet-data:/etc/puppetlabs
       - ../../../puppet/manifests:/etc/puppetlabs/code/environments/production/manifests:ro
       - ../../../puppet/modules:/etc/puppetlabs/code/environments/production/modules:ro
-      - ../../../puppet/hiera.yaml:/etc/puppetlabs/puppet/hiera.yaml:ro
+      - ../../../puppet/hiera.yaml:/puppet/hiera.yaml:ro
       - ../../../puppet/data:/etc/puppetlabs/code/environments/production/data:ro
     environment:
       PUPPETSERVER_HOSTNAME: "${IP_PUPPET:-10.10.0.21}"
       DNS_ALT_NAMES: "puppet,puppet.${LIGHT_DOMAIN:-simple-test.org}"
+      HIERACONFIG: "/puppet/hiera.yaml"
     ports:
       - "127.0.0.1:8140:8140"
     restart: unless-stopped
