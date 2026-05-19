@@ -154,6 +154,30 @@ deploy_bubbles() {
     done
 }
 
+# ── Helper: copy Checkmk agent .deb from Checkmk container into Ansible container ─
+# Avoids requiring cross-zone (VM→Docker) connectivity for agent installation.
+# The Ansible role uses `copy:` (controller→target via SSH) instead of `get_url`.
+stage_checkmk_agent() {
+    local cmk_ctr="${LIGHT_ENV:-dev}-${LIGHT_LOCATION:-local}-srv-mon-001"
+    local ans_ctr="${LIGHT_ENV:-dev}-${LIGHT_LOCATION:-local}-srv-ans-001"
+
+    local agent_path
+    agent_path=$(docker exec "${cmk_ctr}" \
+        find /omd/sites/cmk/share/check_mk/agents \
+        -name "check-mk-agent_*.deb" 2>/dev/null | head -1) || true
+    if [[ -z "${agent_path}" ]]; then
+        log::warn "No Checkmk .deb agent found in ${cmk_ctr} — agent install will be skipped"
+        return 0
+    fi
+
+    local tmp
+    tmp=$(mktemp --suffix=.deb)
+    docker cp "${cmk_ctr}:${agent_path}" "${tmp}"
+    docker cp "${tmp}" "${ans_ctr}:/tmp/check-mk-agent.deb"
+    rm -f "${tmp}"
+    log::info "Staged Checkmk agent $(basename "${agent_path}") into ${ans_ctr}"
+}
+
 # ── Shared: bring up Docker management zone ───────────────────────────────────
 start_mgmt_zone() {
     log::section "Building images and starting management zone"
@@ -164,6 +188,9 @@ start_mgmt_zone() {
     wait_for_port "${IP_FOREMAN:-10.10.0.20}"  3000 300
     wait_for_port "${IP_CHECKMK:-10.10.0.23}"  5000 240
     wait_for_port "${IP_PULP:-10.10.0.24}"       80 240
+
+    log::section "Staging Checkmk agent into Ansible container"
+    stage_checkmk_agent
 
     log::section "Reloading DNS to pick up topology records"
     docker exec "${LIGHT_ENV:-dev}-${LIGHT_LOCATION:-local}-srv-dns-001" \
