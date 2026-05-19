@@ -1,11 +1,17 @@
 ---
+- name: Check if puppet-agent is already installed
+  stat:
+    path: /opt/puppetlabs/bin/puppet
+  register: puppet_bin
+
 - name: Add Puppet apt repository
   block:
     - name: Download Puppet release package
       get_url:
-        url: "https://apt.puppet.com/puppet8-release-{{ ansible_distribution_release }}.deb"
+        url: "https://apt.puppet.com/puppet8-release-{{ ansible_facts['distribution_release'] }}.deb"
         dest: /tmp/puppet-release.deb
         mode: "0644"
+        timeout: 60
 
     - name: Install Puppet release package
       apt:
@@ -15,13 +21,13 @@
     - name: Update apt cache after adding Puppet repo
       apt:
         update_cache: true
-  when: ansible_os_family == "Debian"
+  when: ansible_facts['os_family'] == "Debian" and not puppet_bin.stat.exists
 
 - name: Install puppet-agent
   apt:
     name: puppet-agent
     state: present
-  when: ansible_os_family == "Debian"
+  when: ansible_facts['os_family'] == "Debian" and not puppet_bin.stat.exists
 
 - name: Configure Puppet agent server
   ini_file:

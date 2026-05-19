@@ -36,10 +36,10 @@ foreman-rake db:seed || true
 # expanded so the runuser login-shell stripping doesn't matter.
 cat > /tmp/set_admin.rb <<RBEOF
 u = User.unscoped.find_by_login('${FOREMAN_ADMIN_USERNAME}') || User.unscoped.find_by_login('admin')
-u.password = '${FOREMAN_ADMIN_PASSWORD}'
-u.password_confirmation = '${FOREMAN_ADMIN_PASSWORD}'
-u.admin = true
-u.save!
+# upgrade_password generates a new salt, hashes the password, and updates the DB
+# columns directly — no validation callbacks, no current_password check.
+u.upgrade_password('${FOREMAN_ADMIN_PASSWORD}')
+u.update_column(:admin, true)
 puts "Admin user '#{u.login}' password set."
 RBEOF
 runuser - foreman -s /bin/bash -c \
@@ -52,6 +52,6 @@ chown -R foreman: /usr/share/foreman/tmp
 
 cd /usr/share/foreman
 exec runuser - foreman -s /bin/bash -c \
-    "cd /usr/share/foreman && RAILS_ENV=production RUBYOPT=-W0 \
+    "cd /usr/share/foreman && RAILS_ENV=production RUBYOPT=-W0 RAILS_SERVE_STATIC_FILES=true \
      exec /usr/bin/foreman-ruby /usr/bin/bundle3.0 exec puma \
      -C config/puma/docker.rb"

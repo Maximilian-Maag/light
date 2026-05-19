@@ -5,19 +5,21 @@
   gather_facts: false
 
   vars:
-    checkmk_url: "https://{{ lookup('env', 'IP_CHECKMK') }}/cmk/check_mk"
+    checkmk_url:  "{{ lookup('env', 'CHECKMK_SERVER_URL') }}/cmk/check_mk"
     checkmk_pass: "{{ lookup('env', 'CHECKMK_ADMIN_PASS') }}"
+    domain:       "{{ lookup('env', 'LIGHT_DOMAIN') }}"
 
   tasks:
     - name: Remove host from Checkmk
       uri:
-        url: "{{ checkmk_url }}/api/1.0/objects/host_config/{{ inventory_hostname }}"
+        url: "{{ checkmk_url }}/api/1.0/objects/host_config/{{ inventory_hostname }}.{{ domain }}"
         method: DELETE
         user: cmkadmin
         password: "{{ checkmk_pass }}"
         force_basic_auth: true
         validate_certs: false
         status_code: [200, 204, 404]
+        timeout: 30
 
     - name: Activate Checkmk changes
       uri:
@@ -31,4 +33,5 @@
         body:
           redirect: false
         status_code: [200, 202]
+        timeout: 30
       run_once: true

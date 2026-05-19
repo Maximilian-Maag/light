@@ -55,21 +55,56 @@ dc() {
 }
 
 # ── Helper: run ansible via the ansible controller container ───────────────────
+# Optional env var BUBBLE_NAME scopes ANSIBLE_ROLES_PATH to include that bubble's roles.
 ansible_in_container() {
     local playbook="${1:?}"; shift
+    local roles_path="/opt/ansible/roles"
+    local ans_ctr="${LIGHT_ENV:-dev}-${LIGHT_LOCATION:-local}-srv-ans-001"
+    if [[ -n "${BUBBLE_NAME:-}" ]]; then
+        roles_path="${roles_path}:/opt/bubbles/${BUBBLE_NAME}/ansible/roles"
+    fi
+    # Only add Foreman dynamic inventory when Foreman is reachable and authenticated.
+    # Avoids the noisy "401 / Unable to parse" warning on every playbook run.
+    local inventories=()
+    if curl -sf --max-time 5 \
+           -u "${FOREMAN_ADMIN_USER:-admin}:${FOREMAN_ADMIN_PASS:-changeme}" \
+           "http://${IP_FOREMAN:-10.10.0.20}:3000/api/v2/status" \
+           -o /dev/null 2>/dev/null; then
+        inventories+=(-i /opt/ansible/inventory/foreman.yml)
+    fi
+    inventories+=(-i /opt/ansible/inventory/topology.ini)
     docker exec \
-        "${LIGHT_ENV:-dev}-${LIGHT_LOCATION:-local}-srv-ans-001" \
+        -e "ANSIBLE_ROLES_PATH=${roles_path}" \
+        "${ans_ctr}" \
         ansible-playbook \
-            -i /opt/ansible/inventory/foreman.yml \
-            -i /opt/ansible/inventory/topology.ini \
+            "${inventories[@]}" \
             "/opt/ansible/playbooks/${playbook}" \
             "$@"
 }
 
 # ── Helper: inject ip route into a management zone container ──────────────────
+# Uses nsenter so the host's iproute2 operates on the container's network namespace,
+# avoiding the "ip: executable file not found" error in minimal container images.
 inject_route() {
     local container="${1:?}" cidr="${2:?}" via="${3:?}"
-    docker exec "${container}" ip route add "${cidr}" via "${via}" 2>/dev/null || true
+    local pid
+    pid=$(docker inspect --format '{{.State.Pid}}' "${container}" 2>/dev/null) || return 0
+    [[ -z "${pid}" || "${pid}" == "0" ]] && return 0
+    nsenter --net="/proc/${pid}/ns/net" -- \
+        ip route add "${cidr}" via "${via}" 2>/dev/null || true
+}
+
+# ── Helper: allow workload VM subnet to reach the Docker management zone ───────
+# Docker's FORWARD chain drops new connections from non-Docker interfaces by
+# default. Without this, VMs can't reach DNS/NTP/Puppet/etc. in the mgmt zone.
+allow_vm_to_mgmt() {
+    local vm_cidr="${1:?}"
+    local mgmt_cidr="${MGMT_ZONE_CIDR:-10.10.0.0/24}"
+    # Use sudo for both the check and the insert so permission-denied doesn't
+    # cause a spurious "rule missing" and an unnecessary interactive sudo prompt.
+    sudo iptables -C DOCKER-USER -s "${vm_cidr}" -d "${mgmt_cidr}" -j ACCEPT 2>/dev/null && return 0
+    sudo iptables -I DOCKER-USER 1 -s "${vm_cidr}" -d "${mgmt_cidr}" -j ACCEPT 2>/dev/null || \
+        log::warn "Could not add iptables FORWARD rule for ${vm_cidr} → ${mgmt_cidr} (cross-zone DNS/NTP will fail)"
 }
 
 # ── Helper: get bubble CIDR from topology.json ────────────────────────────────
@@ -107,7 +142,7 @@ deploy_bubbles() {
         ansible_in_container baseline.yml --limit "bubble_${bubble}"
 
         log::info "Running bubble-deploy playbook for ${bubble}"
-        ansible_in_container bubble-deploy.yml \
+        BUBBLE_NAME="${bubble}" ansible_in_container bubble-deploy.yml \
             -e "bubble_name=${bubble}" \
             --limit "bubble_${bubble}"
 
@@ -146,6 +181,14 @@ case "${LIGHT_RUNTIME}" in
     # ── Hybrid (default): Docker mgmt zone + Vagrant workload VMs ────────────
     hybrid)
         preflight_dev_hybrid
+
+        # Cache sudo credentials now so iptables / nsenter calls later don't
+        # block in the middle of a long-running step.
+        if ! sudo -n true 2>/dev/null; then
+            log::info "sudo required for iptables cross-zone rules — enter password once:"
+            sudo -v
+        fi
+
         start_mgmt_zone
 
         if [[ ${#BUBBLES[@]} -gt 0 ]]; then
@@ -166,13 +209,15 @@ case "${LIGHT_RUNTIME}" in
                 for ctr in "${CROSS_ZONE_CONTAINERS[@]}"; do
                     inject_route "${ctr}" "${cidr}" "${MGMT_GW}"
                 done
+                log::info "Allowing ${cidr} → management zone forwarding in iptables"
+                allow_vm_to_mgmt "${cidr}"
             done
 
             log::section "Starting workload VMs via Vagrant"
             [[ -f "${VAGRANT_TOPO}" ]] || log::die "Vagrantfile.topology not found — run gen-topology.sh first"
             (
                 cd "${LIGHT_ROOT}/environments/dev/vagrant"
-                VAGRANT_VAGRANTFILE=Vagrantfile.topology vagrant up
+                VAGRANT_VAGRANTFILE=Vagrantfile.topology vagrant up --provision --no-parallel
             )
 
             deploy_bubbles

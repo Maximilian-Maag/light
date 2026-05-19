@@ -2,10 +2,20 @@
 # Source of truth: config/topology.json
 # Used by: environments/dev/startup.sh when LIGHT_RUNTIME=hybrid
 
+ADMIN_SSH_KEY_PRIVATE = ENV.fetch("ADMIN_SSH_KEY_PRIVATE", File.join(Dir.home, ".ssh", "id_ed25519"))
+ADMIN_PUB_KEY = begin
+  File.read("#{ADMIN_SSH_KEY_PRIVATE}.pub").strip
+rescue
+  ""
+end
+
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-22.04"
   config.vm.provider "virtualbox"
   config.ssh.insert_key = false
+  config.ssh.keys_only = true
+  config.ssh.connect_timeout = 30
+  config.vm.boot_timeout = 600
 
   # ── Bubble: nextcloud (10.20.1.0/24) ──────────────────────────────────────────
 
@@ -24,17 +34,32 @@ Vagrant.configure("2") do |config|
       grep -qxF "ip route add 10.10.0.0/24 via 10.20.1.1" /etc/rc.local 2>/dev/null \
         || printf "\nip route add 10.10.0.0/24 via 10.20.1.1 2>/dev/null || true\n" >> /etc/rc.local
       chmod +x /etc/rc.local
-      # Point DNS at management zone server
-      printf "nameserver 10.10.0.30\n" > /etc/resolv.conf
-      # Install puppet-agent (internet bootstrap; Pulp used for subsequent packages)
+      # Create admin user with Ansible SSH key
+      id admin &>/dev/null || useradd -m -s /bin/bash -G sudo admin
+      mkdir -p /home/admin/.ssh
+      echo "#{ADMIN_PUB_KEY}" > /home/admin/.ssh/authorized_keys
+      chmod 700 /home/admin/.ssh && chmod 600 /home/admin/.ssh/authorized_keys
+      chown -R admin:admin /home/admin/.ssh
+      echo "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/admin
+      # Install puppet-agent before overwriting DNS (wget needs internet/public DNS)
+      apt-get update -qq
       if ! command -v puppet >/dev/null 2>&1; then
         wget -q https://apt.puppet.com/puppet7-release-jammy.deb -O /tmp/puppet.deb
         dpkg -i /tmp/puppet.deb && apt-get update -qq
         DEBIAN_FRONTEND=noninteractive apt-get install -y -qq puppet-agent
       fi
+      # Point DNS at management zone; keep 8.8.8.8 as fallback so apt
+      # update works even if the mgmt route is not yet forwarded.
+      printf "nameserver 10.10.0.30\nnameserver 8.8.8.8\n" > /etc/resolv.conf
       mkdir -p /etc/puppetlabs/puppet
       printf "[main]\nserver = 10.10.0.21\nenvironment = production\nruninterval = 1800\n" \
         > /etc/puppetlabs/puppet/puppet.conf
+      # Re-open Vagrant NAT SSH after UFW baseline: VirtualBox NAT gateway
+      # is always 10.0.2.2; UFW deny-inbound is applied by Ansible common role.
+      # No-op on first provision (UFW not installed yet).
+      if command -v ufw >/dev/null 2>&1; then
+        ufw allow from 10.0.2.2 to any port 22 proto tcp 2>/dev/null || true
+      fi
     SHELL
   end
 
@@ -53,17 +78,32 @@ Vagrant.configure("2") do |config|
       grep -qxF "ip route add 10.10.0.0/24 via 10.20.1.1" /etc/rc.local 2>/dev/null \
         || printf "\nip route add 10.10.0.0/24 via 10.20.1.1 2>/dev/null || true\n" >> /etc/rc.local
       chmod +x /etc/rc.local
-      # Point DNS at management zone server
-      printf "nameserver 10.10.0.30\n" > /etc/resolv.conf
-      # Install puppet-agent (internet bootstrap; Pulp used for subsequent packages)
+      # Create admin user with Ansible SSH key
+      id admin &>/dev/null || useradd -m -s /bin/bash -G sudo admin
+      mkdir -p /home/admin/.ssh
+      echo "#{ADMIN_PUB_KEY}" > /home/admin/.ssh/authorized_keys
+      chmod 700 /home/admin/.ssh && chmod 600 /home/admin/.ssh/authorized_keys
+      chown -R admin:admin /home/admin/.ssh
+      echo "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/admin
+      # Install puppet-agent before overwriting DNS (wget needs internet/public DNS)
+      apt-get update -qq
       if ! command -v puppet >/dev/null 2>&1; then
         wget -q https://apt.puppet.com/puppet7-release-jammy.deb -O /tmp/puppet.deb
         dpkg -i /tmp/puppet.deb && apt-get update -qq
         DEBIAN_FRONTEND=noninteractive apt-get install -y -qq puppet-agent
       fi
+      # Point DNS at management zone; keep 8.8.8.8 as fallback so apt
+      # update works even if the mgmt route is not yet forwarded.
+      printf "nameserver 10.10.0.30\nnameserver 8.8.8.8\n" > /etc/resolv.conf
       mkdir -p /etc/puppetlabs/puppet
       printf "[main]\nserver = 10.10.0.21\nenvironment = production\nruninterval = 1800\n" \
         > /etc/puppetlabs/puppet/puppet.conf
+      # Re-open Vagrant NAT SSH after UFW baseline: VirtualBox NAT gateway
+      # is always 10.0.2.2; UFW deny-inbound is applied by Ansible common role.
+      # No-op on first provision (UFW not installed yet).
+      if command -v ufw >/dev/null 2>&1; then
+        ufw allow from 10.0.2.2 to any port 22 proto tcp 2>/dev/null || true
+      fi
     SHELL
   end
 
@@ -82,17 +122,32 @@ Vagrant.configure("2") do |config|
       grep -qxF "ip route add 10.10.0.0/24 via 10.20.1.1" /etc/rc.local 2>/dev/null \
         || printf "\nip route add 10.10.0.0/24 via 10.20.1.1 2>/dev/null || true\n" >> /etc/rc.local
       chmod +x /etc/rc.local
-      # Point DNS at management zone server
-      printf "nameserver 10.10.0.30\n" > /etc/resolv.conf
-      # Install puppet-agent (internet bootstrap; Pulp used for subsequent packages)
+      # Create admin user with Ansible SSH key
+      id admin &>/dev/null || useradd -m -s /bin/bash -G sudo admin
+      mkdir -p /home/admin/.ssh
+      echo "#{ADMIN_PUB_KEY}" > /home/admin/.ssh/authorized_keys
+      chmod 700 /home/admin/.ssh && chmod 600 /home/admin/.ssh/authorized_keys
+      chown -R admin:admin /home/admin/.ssh
+      echo "admin ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/admin
+      # Install puppet-agent before overwriting DNS (wget needs internet/public DNS)
+      apt-get update -qq
       if ! command -v puppet >/dev/null 2>&1; then
         wget -q https://apt.puppet.com/puppet7-release-jammy.deb -O /tmp/puppet.deb
         dpkg -i /tmp/puppet.deb && apt-get update -qq
         DEBIAN_FRONTEND=noninteractive apt-get install -y -qq puppet-agent
       fi
+      # Point DNS at management zone; keep 8.8.8.8 as fallback so apt
+      # update works even if the mgmt route is not yet forwarded.
+      printf "nameserver 10.10.0.30\nnameserver 8.8.8.8\n" > /etc/resolv.conf
       mkdir -p /etc/puppetlabs/puppet
       printf "[main]\nserver = 10.10.0.21\nenvironment = production\nruninterval = 1800\n" \
         > /etc/puppetlabs/puppet/puppet.conf
+      # Re-open Vagrant NAT SSH after UFW baseline: VirtualBox NAT gateway
+      # is always 10.0.2.2; UFW deny-inbound is applied by Ansible common role.
+      # No-op on first provision (UFW not installed yet).
+      if command -v ufw >/dev/null 2>&1; then
+        ufw allow from 10.0.2.2 to any port 22 proto tcp 2>/dev/null || true
+      fi
     SHELL
   end
 

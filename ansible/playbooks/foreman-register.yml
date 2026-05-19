@@ -5,18 +5,21 @@
   gather_facts: true
 
   vars:
-    foreman_url: "https://{{ lookup('env', 'IP_FOREMAN') }}"
-    foreman_user: "{{ lookup('env', 'FOREMAN_ADMIN_USER') }}"
-    foreman_pass: "{{ lookup('env', 'FOREMAN_ADMIN_PASS') }}"
+    foreman_url:  "{{ lookup('env', 'FOREMAN_SERVER_URL') }}"
+    foreman_user: "{{ lookup('env', 'FOREMAN_USER') }}"
+    foreman_pass: "{{ lookup('env', 'FOREMAN_PASSWORD') }}"
+    domain:       "{{ lookup('env', 'LIGHT_DOMAIN') }}"
 
   tasks:
     - name: Ensure host exists in Foreman
       theforeman.foreman.host:
-        server_url: "{{ foreman_url }}"
-        username: "{{ foreman_user }}"
-        password: "{{ foreman_pass }}"
+        server_url:    "{{ foreman_url }}"
+        username:      "{{ foreman_user }}"
+        password:      "{{ foreman_pass }}"
         validate_certs: false
-        name: "{{ inventory_hostname }}"
-        ip: "{{ ansible_default_ipv4.address }}"
-        environment: "production"
+        name:          "{{ inventory_hostname }}.{{ domain }}"
+        ip:            "{{ ansible_host }}"
+        environment:   "production"
         state: present
+      async: 60
+      poll: 5

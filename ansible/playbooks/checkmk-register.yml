@@ -5,8 +5,9 @@
   gather_facts: true
 
   vars:
-    checkmk_url: "https://{{ lookup('env', 'IP_CHECKMK') }}/cmk/check_mk"
+    checkmk_url:  "{{ lookup('env', 'CHECKMK_SERVER_URL') }}/cmk/check_mk"
     checkmk_pass: "{{ lookup('env', 'CHECKMK_ADMIN_PASS') }}"
+    domain:       "{{ lookup('env', 'LIGHT_DOMAIN') }}"
 
   tasks:
     - name: Add host to Checkmk
@@ -19,11 +20,12 @@
         validate_certs: false
         body_format: json
         body:
-          host_name: "{{ inventory_hostname }}"
+          host_name: "{{ inventory_hostname }}.{{ domain }}"
           folder: "/"
           attributes:
-            ipaddress: "{{ ansible_default_ipv4.address }}"
+            ipaddress: "{{ ansible_host }}"
         status_code: [200, 201, 422]
+        timeout: 30
 
     - name: Activate Checkmk changes
       uri:
@@ -37,4 +39,5 @@
         body:
           redirect: false
         status_code: [200, 202]
+        timeout: 30
       run_once: true

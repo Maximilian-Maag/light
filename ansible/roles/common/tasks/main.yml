@@ -1,6 +1,28 @@
 ---
 # Common baseline tasks — runs on every host in every environment.
 # Puppet will re-enforce these on its 30-min pull cycle.
+#
+# Order matters: packages must be installed before their config dirs exist,
+# and apt must be updated with the existing system sources before we switch
+# to the Pulp mirror (Pulp may not be synced yet on first run).
+
+- name: Update apt cache with system sources
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+  async: 300
+  poll: 15
+
+- name: Install base packages
+  apt:
+    name:
+      - curl
+      - ca-certificates
+      - chrony
+      - ufw
+      - netcat-openbsd
+      - logwatch
+    state: present
 
 - name: Set hostname
   hostname:
@@ -109,28 +131,12 @@
   community.general.ufw:
     rule: allow
     to_ip: "{{ checkmk_server }}"
-    to_port: "443"
+    to_port: "{{ checkmk_port | default('5000') }}"
     proto: tcp
     direction: out
 
-- name: Configure APT to use Pulp mirror
+- name: Switch APT to Pulp mirror
   template:
     src: apt-sources.list.j2
     dest: /etc/apt/sources.list
     mode: "0644"
-
-- name: Update apt cache
-  apt:
-    update_cache: true
-    cache_valid_time: 3600
-
-- name: Install base packages
-  apt:
-    name:
-      - curl
-      - ca-certificates
-      - chrony
-      - ufw
-      - netcat-openbsd
-      - logwatch
-    state: present

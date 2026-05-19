@@ -42,6 +42,6 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=5 --start-period=180s \
-    CMD curl -fs http://localhost:3000/api/v2/status
+    CMD curl -fs http://127.0.0.1:3000/
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -154,6 +154,7 @@ services:
       FOREMAN_ADMIN_USERNAME: "${FOREMAN_ADMIN_USER:-admin}"
       FOREMAN_ADMIN_PASSWORD: "${FOREMAN_ADMIN_PASS:-changeme}"
       PUPPET_SERVER: "${IP_PUPPET:-10.10.0.21}"
+      RAILS_SERVE_STATIC_FILES: "true"
     ports:
       - "127.0.0.1:9090:3000"
     depends_on:
@@ -167,7 +168,7 @@ services:
     dns:
       - "${IP_DNS_PRIMARY:-10.10.0.30}"
     healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:3000/api/v2/status"]
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:3000/"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -187,11 +188,22 @@ services:
       - NET_ADMIN
     volumes:
       - ../../../ansible:/opt/ansible:ro
+      - ../../../bubbles:/opt/bubbles:ro
       - "${ADMIN_SSH_KEY_PRIVATE}:/root/.ssh/id_ed25519:ro"
     environment:
       FOREMAN_SERVER_URL: "http://${IP_FOREMAN:-10.10.0.20}:3000"
       FOREMAN_USER: "${FOREMAN_ADMIN_USER:-admin}"
       FOREMAN_PASSWORD: "${FOREMAN_ADMIN_PASS:-changeme}"
+      CHECKMK_SERVER_URL: "http://${IP_CHECKMK:-10.10.0.23}:5000"
+      CHECKMK_ADMIN_PASS: "${CHECKMK_ADMIN_PASS:-changeme}"
+      LIGHT_DOMAIN: "${LIGHT_DOMAIN:-simple-test.org}"
+      IP_PUPPET: "${IP_PUPPET:-10.10.0.21}"
+      IP_CHECKMK: "${IP_CHECKMK:-10.10.0.23}"
+      IP_PULP: "${IP_PULP:-10.10.0.24}"
+      IP_NTP_PRIMARY: "${IP_NTP_PRIMARY:-10.10.0.32}"
+      IP_NTP_SECONDARY: "${IP_NTP_SECONDARY:-10.10.0.33}"
+      IP_DNS_PRIMARY: "${IP_DNS_PRIMARY:-10.10.0.30}"
+      IP_DNS_SECONDARY: "${IP_DNS_SECONDARY:-10.10.0.31}"
     restart: unless-stopped
     dns:
       - "${IP_DNS_PRIMARY:-10.10.0.30}"
@@ -209,7 +221,7 @@ services:
     volumes:
       - checkmk-data:/omd/sites
     environment:
-      CMK_ADMIN_PASSWORD: "${CHECKMK_ADMIN_PASS:-changeme}"
+      CMK_PASSWORD: "${CHECKMK_ADMIN_PASS:-changeme}"
     ports:
       - "127.0.0.1:5000:5000"
     restart: unless-stopped

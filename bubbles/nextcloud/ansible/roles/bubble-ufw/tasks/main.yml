@@ -14,7 +14,7 @@
   loop: "{{ bubble_members }}"
   loop_control:
     label: "intra-bubble inbound from {{ item.name }} ({{ item.ip }})"
-  when: item.ip != ansible_default_ipv4.address
+  when: item.ip != ansible_facts['default_ipv4']['address']
 
 - name: Allow outbound to all bubble members
   community.general.ufw:
@@ -24,7 +24,7 @@
   loop: "{{ bubble_members }}"
   loop_control:
     label: "intra-bubble outbound to {{ item.name }} ({{ item.ip }})"
-  when: item.ip != ansible_default_ipv4.address
+  when: item.ip != ansible_facts['default_ipv4']['address']
 
 - name: Deny inbound from all other workload/bubble ranges (cross-bubble block)
   community.general.ufw:
@@ -47,4 +47,4 @@
   loop: "{{ bubble_members }}"
   loop_control:
     label: "re-allow inbound from {{ item.name }}"
-  when: item.ip != ansible_default_ipv4.address
+  when: item.ip != ansible_facts['default_ipv4']['address']
